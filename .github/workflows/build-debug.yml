@@ -60,6 +60,9 @@ jobs:
           JB_BASE="https://github.com/JetBrains/JetBrainsMono/releases/download/v2.304"
           curl -fsSL "$JB_BASE/JetBrainsMono-2.304.zip" -o /tmp/jb.zip
           unzip -j /tmp/jb.zip "*/JetBrainsMono-Regular.ttf" -d "$FONT_DIR" || true
+          NOTO_BASE="https://github.com/google/fonts/raw/main/ofl/notosansdevanagari"
+          curl -fsSL "$NOTO_BASE/NotoSansDevanagari%5Bwdth%2Cwght%5D.ttf" -o "$FONT_DIR/NotoSansDevanagari-Regular.ttf" || true
+          cp "$FONT_DIR/NotoSansDevanagari-Regular.ttf" "$FONT_DIR/NotoSansDevanagari-Medium.ttf" 2>/dev/null || true
           ls -la "$FONT_DIR/"
 
       - name: Generate version info

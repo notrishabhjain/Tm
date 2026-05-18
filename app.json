@@ -60,7 +60,7 @@
           ]
         }
       ],
-      "./modules/notification-listener"
+      "./modules/notification-listener/app.plugin.js"
     ]
   }
 }
