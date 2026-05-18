@@ -62,7 +62,11 @@ export default function TaskDetailScreen(): React.JSX.Element {
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: priorityColor }]}>
-        <Pressable onPress={() => router.back()} style={styles.backButton} accessibilityRole="button">
+        <Pressable
+          onPress={() => router.back()}
+          style={styles.backButton}
+          accessibilityRole="button"
+        >
           <Text style={styles.backText}>‹ Back</Text>
         </Pressable>
         <PriorityChip priority={task.priority} />
@@ -78,10 +82,7 @@ export default function TaskDetailScreen(): React.JSX.Element {
         <View style={styles.sourceCard}>
           <InfoRow label="Source" value={task.sourceApp.split('.').pop() ?? task.sourceApp} />
           {task.sender && <InfoRow label="From" value={task.sender} />}
-          <InfoRow
-            label="Captured"
-            value={new Date(task.createdAt).toLocaleString('en-IN')}
-          />
+          <InfoRow label="Captured" value={new Date(task.createdAt).toLocaleString('en-IN')} />
           <InfoRow label="Confidence" value={`${Math.round(task.confidence * 100)}%`} />
         </View>
 

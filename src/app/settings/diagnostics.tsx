@@ -1,12 +1,5 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  Pressable,
-  Alert,
-} from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
@@ -73,9 +66,7 @@ export default function DiagnosticsScreen(): React.JSX.Element {
             style={[styles.tab, activeTab === tab && styles.tabActive]}
             onPress={() => setActiveTab(tab)}
           >
-            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
-              {tab}
-            </Text>
+            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>{tab}</Text>
           </Pressable>
         ))}
       </ScrollView>
@@ -188,7 +179,10 @@ function DiscardedTab(): React.JSX.Element {
   return (
     <View style={styles.emptyTab}>
       <Text style={styles.emptyText}>Discarded log shown here.</Text>
-      <Text style={styles.emptyHint}>Tasks that were discarded due to low confidence appear here. You can promote them to tasks manually.</Text>
+      <Text style={styles.emptyHint}>
+        Tasks that were discarded due to low confidence appear here. You can promote them to tasks
+        manually.
+      </Text>
     </View>
   );
 }
@@ -206,10 +200,7 @@ function SystemTab(): React.JSX.Element {
   return (
     <View style={styles.dbTab}>
       <SystemRow label="App Version" value="0.1.0" />
-      <SystemRow
-        label="Commit"
-        value={process.env['EXPO_PUBLIC_COMMIT_SHA'] ?? 'dev'}
-      />
+      <SystemRow label="Commit" value={process.env['EXPO_PUBLIC_COMMIT_SHA'] ?? 'dev'} />
       <SystemRow label="React Native" value="0.76.9" />
       <SystemRow label="Expo SDK" value="52" />
     </View>
@@ -259,7 +250,12 @@ const styles = StyleSheet.create({
   content: { flex: 1 },
   emptyTab: { padding: 24, alignItems: 'center' },
   emptyText: { fontSize: 15, fontWeight: '600', color: Colors.onSurfaceLight, marginBottom: 8 },
-  emptyHint: { fontSize: 13, color: Colors.onSurfaceVariantLight, textAlign: 'center', lineHeight: 20 },
+  emptyHint: {
+    fontSize: 13,
+    color: Colors.onSurfaceVariantLight,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
   logList: { padding: 12, gap: 8 },
   logRow: {
     flexDirection: 'row',

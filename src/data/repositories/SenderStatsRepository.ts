@@ -37,7 +37,13 @@ export class SenderStatsRepository {
 
     const result = await this.db
       .insert(senderStats)
-      .values({ senderKey, confirmCount: 0, rejectCount: 0, autoAcceptCount: 0, lastSeenAt: Date.now() })
+      .values({
+        senderKey,
+        confirmCount: 0,
+        rejectCount: 0,
+        autoAcceptCount: 0,
+        lastSeenAt: Date.now(),
+      })
       .returning();
     if (!result[0]) throw new Error(`Failed to create sender stats for ${senderKey}`);
     return result[0];

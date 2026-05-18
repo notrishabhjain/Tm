@@ -27,8 +27,8 @@ export default function OnboardingVipScreen(): React.JSX.Element {
         <Text style={styles.stepLabel}>Step 3 of 4</Text>
         <Text style={styles.title}>VIP Contacts</Text>
         <Text style={styles.description}>
-          Messages from VIP contacts always create URGENT tasks and skip the confirmation queue.
-          Add names as they appear in your notifications.
+          Messages from VIP contacts always create URGENT tasks and skip the confirmation queue. Add
+          names as they appear in your notifications.
         </Text>
 
         <View style={styles.inputRow}>
@@ -64,11 +64,7 @@ export default function OnboardingVipScreen(): React.JSX.Element {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button
-          label="Continue →"
-          onPress={() => void router.push('/onboarding/done')}
-          fullWidth
-        />
+        <Button label="Continue →" onPress={() => void router.push('/onboarding/done')} fullWidth />
         <Button
           label="Skip"
           variant="secondary"
@@ -85,7 +81,12 @@ const styles = StyleSheet.create({
   content: { padding: 24 },
   stepLabel: { fontSize: 12, color: Colors.onSurfaceVariantLight, marginBottom: 8 },
   title: { fontSize: 26, fontWeight: '700', color: Colors.primary900, marginBottom: 12 },
-  description: { fontSize: 15, color: Colors.onSurfaceVariantLight, lineHeight: 24, marginBottom: 24 },
+  description: {
+    fontSize: 15,
+    color: Colors.onSurfaceVariantLight,
+    lineHeight: 24,
+    marginBottom: 24,
+  },
   inputRow: { flexDirection: 'row', gap: 8, marginBottom: 16 },
   input: {
     flex: 1,

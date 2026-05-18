@@ -36,11 +36,8 @@ const ThemeContext = createContext<Theme>(buildTheme(false));
 export function ThemeProvider({ children }: { children: React.ReactNode }): React.JSX.Element {
   const systemScheme = useColorScheme();
   const themeSetting = getSetting('theme');
-  const isDark =
-    themeSetting === 'dark' || (themeSetting === 'system' && systemScheme === 'dark');
-  return (
-    <ThemeContext.Provider value={buildTheme(isDark)}>{children}</ThemeContext.Provider>
-  );
+  const isDark = themeSetting === 'dark' || (themeSetting === 'system' && systemScheme === 'dark');
+  return <ThemeContext.Provider value={buildTheme(isDark)}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme(): Theme {

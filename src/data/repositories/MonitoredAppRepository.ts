@@ -22,10 +22,7 @@ export class MonitoredAppRepository {
   }
 
   async getActive(): Promise<MonitoredApp[]> {
-    const rows = await this.db
-      .select()
-      .from(monitoredApps)
-      .where(eq(monitoredApps.isActive, true));
+    const rows = await this.db.select().from(monitoredApps).where(eq(monitoredApps.isActive, true));
     return rows.map(mapRow);
   }
 

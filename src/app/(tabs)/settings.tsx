@@ -15,7 +15,10 @@ export default function SettingsScreen(): React.JSX.Element {
 
       <Section title="Intelligence">
         <NavRow label="Priority Rules" subtitle="Rule-based mode" onPress={() => {}} />
-        <NavRow label="Learned Vocabulary" onPress={() => void router.push('/settings/vocabulary')} />
+        <NavRow
+          label="Learned Vocabulary"
+          onPress={() => void router.push('/settings/vocabulary')}
+        />
       </Section>
 
       <Section title="Nudges">

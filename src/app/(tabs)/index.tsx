@@ -31,7 +31,11 @@ export default function HomeScreen(): React.JSX.Element {
   const queryClient = useQueryClient();
   const { activeFilter, setActiveFilter } = useTaskStore();
 
-  const { data: tasks = [], isLoading, refetch } = useQuery({
+  const {
+    data: tasks = [],
+    isLoading,
+    refetch,
+  } = useQuery({
     queryKey: ['tasks', 'pending'],
     queryFn: () => taskRepo.getPendingTasks(),
     refetchInterval: 10000,
@@ -53,10 +57,7 @@ export default function HomeScreen(): React.JSX.Element {
 
   const urgentCount = tasks.filter((t) => t.priority === 'URGENT').length;
 
-  const handlePress = useCallback(
-    (task: Task) => router.push(`/task/${task.id}`),
-    [router]
-  );
+  const handlePress = useCallback((task: Task) => router.push(`/task/${task.id}`), [router]);
   const handleComplete = useCallback(
     (task: Task) => completeMutation.mutate(task.id),
     [completeMutation]
@@ -72,11 +73,7 @@ export default function HomeScreen(): React.JSX.Element {
       <View style={styles.statsStrip}>
         <StatItem label="Pending" value={tasks.length} />
         <StatItem label="Urgent" value={urgentCount} valueColor={Colors.urgentFg} />
-        <StatItem
-          label="Done today"
-          value={0}
-          valueColor={Colors.success}
-        />
+        <StatItem label="Done today" value={0} valueColor={Colors.success} />
       </View>
 
       {/* Filter chips */}
@@ -158,9 +155,7 @@ function FilterChip({
   onPress: () => void;
 }): React.JSX.Element {
   return (
-    <View
-      style={[styles.filterChip, active && styles.filterChipActive]}
-    >
+    <View style={[styles.filterChip, active && styles.filterChipActive]}>
       <Text
         style={[styles.filterChipText, active && styles.filterChipTextActive]}
         onPress={onPress}

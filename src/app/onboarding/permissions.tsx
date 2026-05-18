@@ -96,7 +96,12 @@ const styles = StyleSheet.create({
   content: { flex: 1, paddingTop: 24 },
   stepLabel: { fontSize: 12, color: Colors.onSurfaceVariantLight, marginBottom: 8 },
   title: { fontSize: 26, fontWeight: '700', color: Colors.primary900, marginBottom: 16 },
-  description: { fontSize: 15, color: Colors.onSurfaceVariantLight, lineHeight: 24, marginBottom: 24 },
+  description: {
+    fontSize: 15,
+    color: Colors.onSurfaceVariantLight,
+    lineHeight: 24,
+    marginBottom: 24,
+  },
   statusCard: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -52,18 +52,14 @@ export async function runExtractionPipeline(
   const ruleResult = runRuleEngine(normalized, wordCount, relevantVocab);
 
   const senderLower = (input.title ?? '').toLowerCase();
-  const isVipSender = config.vipSenders.some((vip) =>
-    senderLower.includes(vip.toLowerCase())
-  );
+  const isVipSender = config.vipSenders.some((vip) => senderLower.includes(vip.toLowerCase()));
 
   let modelScore: number | null = null;
   if (config.modelInferer) {
     try {
       modelScore = await Promise.race([
         config.modelInferer(normalized, language),
-        new Promise<number>((_, reject) =>
-          setTimeout(() => reject(new Error('timeout')), 500)
-        ),
+        new Promise<number>((_, reject) => setTimeout(() => reject(new Error('timeout')), 500)),
       ]);
     } catch {
       modelScore = null;

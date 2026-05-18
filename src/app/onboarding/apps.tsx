@@ -49,9 +49,7 @@ export default function OnboardingAppsScreen(): React.JSX.Element {
             accessibilityRole="checkbox"
             accessibilityState={{ checked: item.selected }}
           >
-            <View
-              style={[styles.checkbox, item.selected && styles.checkboxSelected]}
-            >
+            <View style={[styles.checkbox, item.selected && styles.checkboxSelected]}>
               {item.selected && <Text style={styles.checkmark}>✓</Text>}
             </View>
             <Text style={styles.appName}>{item.displayName}</Text>

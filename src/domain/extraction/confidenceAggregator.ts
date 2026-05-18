@@ -27,14 +27,14 @@ export function aggregateConfidence(input: AggregatorInput): AggregatorResult {
   finalConfidence = Math.max(0, Math.min(1, finalConfidence));
 
   // VIP override: accept with lower threshold
-  if (input.isVipSender && finalConfidence >= 0.30) {
+  if (input.isVipSender && finalConfidence >= 0.3) {
     return { finalConfidence, decision: 'CREATE' };
   }
 
   let decision: ExtractionDecision;
   if (finalConfidence >= 0.75) {
     decision = 'CREATE';
-  } else if (finalConfidence >= 0.40) {
+  } else if (finalConfidence >= 0.4) {
     decision = 'CONFIRM';
   } else {
     decision = 'DISCARD';

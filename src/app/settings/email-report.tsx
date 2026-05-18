@@ -41,6 +41,11 @@ const styles = StyleSheet.create({
   backText: { fontSize: 16, color: Colors.primary500, fontWeight: '600' },
   title: { fontSize: 17, fontWeight: '700', color: Colors.onSurfaceLight },
   content: { flex: 1, padding: 24, justifyContent: 'center', alignItems: 'center' },
-  description: { fontSize: 15, color: Colors.onSurfaceVariantLight, textAlign: 'center', marginBottom: 24 },
+  description: {
+    fontSize: 15,
+    color: Colors.onSurfaceVariantLight,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
   comingSoon: { fontSize: 13, color: Colors.primary300, fontStyle: 'italic' },
 });

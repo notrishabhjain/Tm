@@ -47,7 +47,12 @@ export default function OnboardingDoneScreen(): React.JSX.Element {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.primary900, padding: 32, justifyContent: 'space-between' },
+  container: {
+    flex: 1,
+    backgroundColor: Colors.primary900,
+    padding: 32,
+    justifyContent: 'space-between',
+  },
   content: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   checkCircle: {
     width: 80,
@@ -59,8 +64,20 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   checkIcon: { fontSize: 36, color: Colors.white, fontWeight: '700' },
-  title: { fontSize: 28, fontWeight: '700', color: Colors.white, marginBottom: 16, textAlign: 'center' },
-  description: { fontSize: 16, color: Colors.primary300, lineHeight: 26, textAlign: 'center', marginBottom: 32 },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: Colors.white,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  description: {
+    fontSize: 16,
+    color: Colors.primary300,
+    lineHeight: 26,
+    textAlign: 'center',
+    marginBottom: 32,
+  },
   reminderCard: {
     backgroundColor: 'rgba(255,255,255,0.08)',
     borderRadius: 12,

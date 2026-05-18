@@ -49,10 +49,7 @@ export function Button({
     <Pressable
       {...rest}
       disabled={isDisabled}
-      style={({ pressed }) => [
-        containerStyle,
-        pressed && !isDisabled && styles.pressed,
-      ]}
+      style={({ pressed }) => [containerStyle, pressed && !isDisabled && styles.pressed]}
       accessibilityRole="button"
       accessibilityLabel={label}
     >

@@ -1,9 +1,5 @@
 import { requireNativeModule, EventEmitter } from 'expo-modules-core';
-import type {
-  NotificationData,
-  PersistentNotificationParams,
-  PermissionStatus,
-} from './types';
+import type { NotificationData, PersistentNotificationParams, PermissionStatus } from './types';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const NativeModule = requireNativeModule<any>('NotificationListener');

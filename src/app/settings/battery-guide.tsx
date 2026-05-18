@@ -16,7 +16,7 @@ const GUIDES: Array<{ manufacturer: string; steps: string[] }> = [
   {
     manufacturer: 'OnePlus',
     steps: [
-      'Settings → Battery → Battery Optimization → TaskMind → Don\'t optimize',
+      "Settings → Battery → Battery Optimization → TaskMind → Don't optimize",
       'Settings → Apps → App management → TaskMind → Battery → Allow background activity',
     ],
   },
@@ -29,9 +29,7 @@ const GUIDES: Array<{ manufacturer: string; steps: string[] }> = [
   },
   {
     manufacturer: 'Stock Android / Pixel',
-    steps: [
-      'Settings → Apps → TaskMind → Battery → Unrestricted',
-    ],
+    steps: ['Settings → Apps → TaskMind → Battery → Unrestricted'],
   },
 ];
 
@@ -69,8 +67,8 @@ export default function BatteryGuideScreen(): React.JSX.Element {
         <View style={styles.tipCard}>
           <Text style={styles.tipTitle}>After making changes</Text>
           <Text style={styles.tipText}>
-            Reboot your device, then check Settings → Diagnostics → System to verify the
-            foreground service is running.
+            Reboot your device, then check Settings → Diagnostics → System to verify the foreground
+            service is running.
           </Text>
         </View>
       </ScrollView>

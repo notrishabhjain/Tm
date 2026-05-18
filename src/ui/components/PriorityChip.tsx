@@ -15,13 +15,21 @@ const LABELS: Record<Priority, string> = {
   LOW: 'LOW',
 };
 
-export function PriorityChip({ priority, variant = 'filled' }: PriorityChipProps): React.JSX.Element {
+export function PriorityChip({
+  priority,
+  variant = 'filled',
+}: PriorityChipProps): React.JSX.Element {
   const color = getPriorityColor(priority);
   const bgColor = getPriorityBgLight(priority);
 
   if (variant === 'outlined') {
     return (
-      <View style={[styles.chip, { borderColor: color, borderWidth: 1, backgroundColor: Colors.transparent }]}>
+      <View
+        style={[
+          styles.chip,
+          { borderColor: color, borderWidth: 1, backgroundColor: Colors.transparent },
+        ]}
+      >
         <Text style={[styles.label, { color }]}>{LABELS[priority]}</Text>
       </View>
     );

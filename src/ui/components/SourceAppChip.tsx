@@ -17,7 +17,8 @@ interface SourceAppChipProps {
 }
 
 export function SourceAppChip({ packageName, displayName }: SourceAppChipProps): React.JSX.Element {
-  const label = displayName ?? APP_SHORT_NAMES[packageName] ?? packageName.split('.').pop() ?? packageName;
+  const label =
+    displayName ?? APP_SHORT_NAMES[packageName] ?? packageName.split('.').pop() ?? packageName;
 
   return (
     <View style={styles.chip}>

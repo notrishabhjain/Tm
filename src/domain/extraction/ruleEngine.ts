@@ -1,6 +1,12 @@
 import type { Language } from '../types';
 
-export type KeywordCategory = 'IMPERATIVE' | 'URGENCY' | 'DEADLINE' | 'REQUEST' | 'ANTI_PATTERN' | 'DOMAIN';
+export type KeywordCategory =
+  | 'IMPERATIVE'
+  | 'URGENCY'
+  | 'DEADLINE'
+  | 'REQUEST'
+  | 'ANTI_PATTERN'
+  | 'DOMAIN';
 
 export interface Keyword {
   phrase: string;
@@ -62,13 +68,13 @@ export function runRuleEngine(
   const hasTwoPronoun = /\b(you|your|tumhara|tumhe|aap)\b/i.test(normalized);
 
   let score = 0;
-  if (hasImperative) score += 0.40;
-  if (hasUrgency) score += 0.20;
+  if (hasImperative) score += 0.4;
+  if (hasUrgency) score += 0.2;
   if (hasDeadline) score += 0.15;
   if (hasTwoPronoun) score += 0.15;
-  if (wordCount >= 5 && wordCount <= 40) score += 0.10;
-  if (hasAntiPattern && !hasImperative) score -= 0.30;
-  if (wordCount < 3) score -= 0.20;
+  if (wordCount >= 5 && wordCount <= 40) score += 0.1;
+  if (hasAntiPattern && !hasImperative) score -= 0.3;
+  if (wordCount < 3) score -= 0.2;
 
   score = Math.max(0, Math.min(1, score));
 

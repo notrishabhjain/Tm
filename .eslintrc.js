@@ -32,9 +32,20 @@ module.exports = {
     '@typescript-eslint/no-require-imports': 'off',
 
     // Project style
-    '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
+    '@typescript-eslint/no-unused-vars': [
+      'error',
+      { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
+    ],
     'no-console': ['warn', { allow: ['warn', 'error'] }],
     'react/no-unescaped-entities': 'off',
   },
-  ignorePatterns: ['node_modules/', 'android/', 'ios/', '.expo/', 'coverage/', 'dist/', '__tests__/'],
+  ignorePatterns: [
+    'node_modules/',
+    'android/',
+    'ios/',
+    '.expo/',
+    'coverage/',
+    'dist/',
+    '__tests__/',
+  ],
 };

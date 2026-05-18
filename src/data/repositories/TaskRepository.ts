@@ -61,22 +61,14 @@ export class TaskRepository {
       createdAt: now,
     });
 
-    const result = await this.db
-      .select()
-      .from(tasks)
-      .where(eq(tasks.id, id))
-      .limit(1);
+    const result = await this.db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
 
     if (!result[0]) throw new Error(`Failed to create task ${id}`);
     return mapRow(result[0]);
   }
 
   async getTaskById(id: string): Promise<Task | null> {
-    const result = await this.db
-      .select()
-      .from(tasks)
-      .where(eq(tasks.id, id))
-      .limit(1);
+    const result = await this.db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
     return result[0] ? mapRow(result[0]) : null;
   }
 
@@ -94,11 +86,7 @@ export class TaskRepository {
       .select()
       .from(tasks)
       .where(
-        and(
-          eq(tasks.status, 'PENDING'),
-          eq(tasks.needsConfirmation, true),
-          isNull(tasks.deletedAt)
-        )
+        and(eq(tasks.status, 'PENDING'), eq(tasks.needsConfirmation, true), isNull(tasks.deletedAt))
       )
       .orderBy(desc(tasks.createdAt));
     return rows.map(mapRow);
@@ -132,10 +120,7 @@ export class TaskRepository {
   }
 
   async confirmTask(id: string): Promise<void> {
-    await this.db
-      .update(tasks)
-      .set({ needsConfirmation: false })
-      .where(eq(tasks.id, id));
+    await this.db.update(tasks).set({ needsConfirmation: false }).where(eq(tasks.id, id));
   }
 
   async updateTitle(id: string, title: string): Promise<void> {
@@ -150,12 +135,7 @@ export class TaskRepository {
     const cutoff = Date.now() - retentionMs;
     const result = await this.db
       .delete(tasks)
-      .where(
-        and(
-          not(isNull(tasks.deletedAt)),
-          lt(tasks.deletedAt, cutoff)
-        )
-      );
+      .where(and(not(isNull(tasks.deletedAt)), lt(tasks.deletedAt, cutoff)));
     return result.changes ?? 0;
   }
 

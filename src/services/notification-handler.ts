@@ -28,7 +28,9 @@ const SEED_VOCABULARY: Keyword[] = (seedKeywordsRaw as RawKeyword[]).map((k) => 
   weight: k.priority_hint === 'URGENT' ? 1.5 : k.priority_hint === 'HIGH' ? 1.2 : 1.0,
 }));
 
-export async function handleNotification(taskData: { notification: NotificationData }): Promise<void> {
+export async function handleNotification(taskData: {
+  notification: NotificationData;
+}): Promise<void> {
   const { notification } = taskData;
 
   await initializeDatabase();

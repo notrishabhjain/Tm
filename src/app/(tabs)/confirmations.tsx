@@ -35,18 +35,14 @@ export default function ConfirmationsScreen(): React.JSX.Element {
   };
 
   const handleReject = (task: Task): void => {
-    Alert.alert(
-      'Skip this task?',
-      'This notification will be moved to discarded history.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Skip',
-          style: 'destructive',
-          onPress: () => rejectMutation.mutate(task.id),
-        },
-      ]
-    );
+    Alert.alert('Skip this task?', 'This notification will be moved to discarded history.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Skip',
+        style: 'destructive',
+        onPress: () => rejectMutation.mutate(task.id),
+      },
+    ]);
   };
 
   return (
@@ -63,11 +59,7 @@ export default function ConfirmationsScreen(): React.JSX.Element {
         data={tasks}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => (
-          <ConfirmationCard
-            task={item}
-            onConfirm={handleConfirm}
-            onReject={handleReject}
-          />
+          <ConfirmationCard task={item} onConfirm={handleConfirm} onReject={handleReject} />
         )}
         contentContainerStyle={tasks.length === 0 ? styles.emptyContainer : styles.list}
         ListEmptyComponent={
@@ -104,9 +96,7 @@ function ConfirmationCard({
             {task.sender ? `${task.sender} · ` : ''}
             {task.sourceApp.split('.').pop() ?? task.sourceApp}
           </Text>
-          <Text style={styles.confidence}>
-            {Math.round(task.confidence * 100)}% confident
-          </Text>
+          <Text style={styles.confidence}>{Math.round(task.confidence * 100)}% confident</Text>
         </View>
         <View style={styles.buttonRow}>
           <Button
