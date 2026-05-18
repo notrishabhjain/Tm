@@ -126,6 +126,18 @@ jobs:
             android/app/build/outputs/logs/
           retention-days: 7
 
+      - name: Post failure log as PR comment
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ ! -f /tmp/gradle.log ]; then exit 0; fi
+          PR=$(gh pr list --head "${{ github.ref_name }}" --repo "${{ github.repository }}" --json number -q '.[0].number' 2>/dev/null || true)
+          if [ -z "$PR" ]; then exit 0; fi
+          LOG=$(tail -150 /tmp/gradle.log | head -c 50000)
+          gh issue comment "$PR" --repo "${{ github.repository }}" \
+            --body "$(printf '## Gradle Build Failure (run %s)\n```\n%s\n```' "${{ github.run_id }}" "$LOG")" || true
+
       - name: Write step summary
         if: success()
         run: |
