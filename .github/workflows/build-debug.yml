@@ -81,10 +81,18 @@ jobs:
           EXPO_PUBLIC_COMMIT_SHA: ${{ steps.version.outputs.short_sha }}
           ANDROID_NDK_HOME: ${{ env.ANDROID_SDK_ROOT }}/ndk/26.1.10909125
         run: |
+          set -o pipefail
           cd android && ./gradlew :app:assembleDebug \
             --no-daemon \
             --stacktrace \
-            -Pandroid.injected.invoked.from.ide=false
+            -Pandroid.injected.invoked.from.ide=false \
+            2>&1 | tee /tmp/gradle.log
+          BUILD_EXIT=${PIPESTATUS[0]}
+          echo "## Gradle Build Log (last 200 lines)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -200 /tmp/gradle.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          exit $BUILD_EXIT
 
       - name: Locate and rename APK
         run: |
