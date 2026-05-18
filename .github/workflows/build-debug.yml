@@ -133,31 +133,6 @@ jobs:
             android/app/build/outputs/logs/
           retention-days: 7
 
-      - name: Post failure log as PR comment
-        if: failure()
-        run: |
-          python3 - <<'PYEOF'
-import json, subprocess, os, sys
-log_path = '/tmp/gradle.log'
-if not os.path.exists(log_path):
-    print("No gradle.log found"); sys.exit(0)
-with open(log_path) as f:
-    log = f.read()[-12000:]
-run_id = os.environ.get('GITHUB_RUN_ID', '?')
-body = f"## Gradle Build Failure (run {run_id})\n```\n{log}\n```"
-token = os.environ.get('GITHUB_TOKEN', '')
-if not token:
-    print("No GITHUB_TOKEN"); sys.exit(0)
-r = subprocess.run([
-    'curl', '-sf', '-X', 'POST',
-    '-H', f'Authorization: token {token}',
-    '-H', 'Content-Type: application/json',
-    '-d', json.dumps({"body": body}),
-    'https://api.github.com/repos/notrishabhjain/tm/issues/4/comments'
-], capture_output=True, text=True)
-print("Status:", r.returncode, r.stdout[:200], r.stderr[:200])
-PYEOF
-
       - name: Write step summary
         if: success()
         run: |
