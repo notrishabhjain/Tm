@@ -35,7 +35,9 @@ jobs:
 
       - name: Install NDK
         run: |
-          sdkmanager "ndk;26.1.10909125" --sdk_root="$ANDROID_SDK_ROOT"
+          yes | sdkmanager "ndk;26.1.10909125" --sdk_root="$ANDROID_SDK_ROOT"
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/26.1.10909125" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/26.1.10909125" >> "$GITHUB_ENV"
 
       - name: Cache Gradle
         uses: actions/cache@v4
@@ -79,19 +81,24 @@ jobs:
       - name: Build debug APK
         env:
           EXPO_PUBLIC_COMMIT_SHA: ${{ steps.version.outputs.short_sha }}
-          ANDROID_NDK_HOME: ${{ env.ANDROID_SDK_ROOT }}/ndk/26.1.10909125
         run: |
           set -o pipefail
           cd android && ./gradlew :app:assembleDebug \
             --no-daemon \
             --stacktrace \
+            -PreactNativeArchitectures=arm64-v8a \
             -Pandroid.injected.invoked.from.ide=false \
             2>&1 | tee /tmp/gradle.log
           BUILD_EXIT=${PIPESTATUS[0]}
-          echo "## Gradle Build Log (last 200 lines)" >> $GITHUB_STEP_SUMMARY
+          echo "## Gradle Build Log (last 300 lines)" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          tail -200 /tmp/gradle.log >> $GITHUB_STEP_SUMMARY
+          tail -300 /tmp/gradle.log >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
+          if [ $BUILD_EXIT -ne 0 ]; then
+            grep -E "(FAILED|error:|> Task|BUILD FAILED|Exception|Could not|Caused by)" /tmp/gradle.log | tail -30 | while IFS= read -r line; do
+              echo "::error::$line"
+            done
+          fi
           exit $BUILD_EXIT
 
       - name: Locate and rename APK
@@ -114,6 +121,7 @@ jobs:
         with:
           name: failure-logs-${{ github.run_id }}
           path: |
+            /tmp/gradle.log
             android/app/build/reports/
             android/app/build/outputs/logs/
           retention-days: 7
