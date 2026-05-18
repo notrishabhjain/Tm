@@ -3,9 +3,12 @@ module.exports = function (api) {
   return {
     presets: ['babel-preset-expo'],
     plugins: [
-      ['transform-inline-environment-variables', {
-        include: ['EXPO_PUBLIC_COMMIT_SHA', 'NODE_ENV'],
-      }],
+      [
+        'transform-inline-environment-variables',
+        {
+          include: ['EXPO_PUBLIC_COMMIT_SHA', 'NODE_ENV'],
+        },
+      ],
       'react-native-reanimated/plugin',
     ],
   };

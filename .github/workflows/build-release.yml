@@ -92,9 +92,9 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          name: "TaskMind ${{ steps.version.outputs.tag }}"
+          name: 'TaskMind ${{ steps.version.outputs.tag }}'
           body_path: release-notes.md
-          files: "./taskmind-${{ steps.version.outputs.tag }}.apk"
+          files: './taskmind-${{ steps.version.outputs.tag }}.apk'
           draft: false
           prerelease: ${{ contains(steps.version.outputs.tag, 'rc') || contains(steps.version.outputs.tag, 'beta') }}
 

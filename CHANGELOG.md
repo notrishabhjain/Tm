@@ -5,6 +5,7 @@ All notable changes to TaskMind are documented here.
 ## [Unreleased]
 
 ### Added
+
 - Initial project scaffold with Expo Development Build
 - GitHub Actions CI/CD pipeline (lint, test, build-debug, build-release, generate-keystore)
 - Database schema with Drizzle ORM (8 tables)

@@ -10,7 +10,9 @@ function withNotificationListenerManifest(config) {
 
     // TaskMindNotificationListenerService
     const nlsExists = application.service.some(
-      (s) => s.$?.['android:name'] === 'expo.modules.notificationlistener.TaskMindNotificationListenerService'
+      (s) =>
+        s.$?.['android:name'] ===
+        'expo.modules.notificationlistener.TaskMindNotificationListenerService'
     );
     if (!nlsExists) {
       application.service.push({
