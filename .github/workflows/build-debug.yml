@@ -33,6 +33,10 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Install NDK
+        run: |
+          sdkmanager "ndk;26.1.10909125" --sdk_root="$ANDROID_SDK_ROOT"
+
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
@@ -69,9 +73,13 @@ jobs:
       - name: Make gradlew executable
         run: chmod +x android/gradlew
 
+      - name: Validate Gradle configuration
+        run: cd android && ./gradlew :app:dependencies --configuration releaseCompileClasspath --no-daemon -q 2>&1 | tail -20 || true
+
       - name: Build debug APK
         env:
           EXPO_PUBLIC_COMMIT_SHA: ${{ steps.version.outputs.short_sha }}
+          ANDROID_NDK_HOME: ${{ env.ANDROID_SDK_ROOT }}/ndk/26.1.10909125
         run: |
           cd android && ./gradlew :app:assembleDebug \
             --no-daemon \
