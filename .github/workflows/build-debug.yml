@@ -39,6 +39,13 @@ jobs:
           echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/26.1.10909125" >> "$GITHUB_ENV"
           echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/26.1.10909125" >> "$GITHUB_ENV"
 
+      - name: Configure Gradle user home
+        run: |
+          mkdir -p ~/.gradle
+          echo "org.gradle.java.installations.fromEnv=JAVA_HOME" >> ~/.gradle/gradle.properties
+          echo "org.gradle.java.installations.auto-detect=true" >> ~/.gradle/gradle.properties
+          echo "Configured JAVA_HOME toolchain: $JAVA_HOME"
+
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
@@ -128,15 +135,28 @@ jobs:
 
       - name: Post failure log as PR comment
         if: failure()
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
-          if [ ! -f /tmp/gradle.log ]; then exit 0; fi
-          PR=$(gh pr list --head "${{ github.ref_name }}" --repo "${{ github.repository }}" --json number -q '.[0].number' 2>/dev/null || true)
-          if [ -z "$PR" ]; then exit 0; fi
-          LOG=$(tail -150 /tmp/gradle.log | head -c 50000)
-          gh issue comment "$PR" --repo "${{ github.repository }}" \
-            --body "$(printf '## Gradle Build Failure (run %s)\n```\n%s\n```' "${{ github.run_id }}" "$LOG")" || true
+          python3 - <<'PYEOF'
+import json, subprocess, os, sys
+log_path = '/tmp/gradle.log'
+if not os.path.exists(log_path):
+    print("No gradle.log found"); sys.exit(0)
+with open(log_path) as f:
+    log = f.read()[-12000:]
+run_id = os.environ.get('GITHUB_RUN_ID', '?')
+body = f"## Gradle Build Failure (run {run_id})\n```\n{log}\n```"
+token = os.environ.get('GITHUB_TOKEN', '')
+if not token:
+    print("No GITHUB_TOKEN"); sys.exit(0)
+r = subprocess.run([
+    'curl', '-sf', '-X', 'POST',
+    '-H', f'Authorization: token {token}',
+    '-H', 'Content-Type: application/json',
+    '-d', json.dumps({"body": body}),
+    'https://api.github.com/repos/notrishabhjain/tm/issues/4/comments'
+], capture_output=True, text=True)
+print("Status:", r.returncode, r.stdout[:200], r.stderr[:200])
+PYEOF
 
       - name: Write step summary
         if: success()
