@@ -14,6 +14,8 @@ jobs:
     name: Build Debug APK
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    permissions:
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v4
@@ -33,6 +35,19 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
+      - name: Install NDK
+        run: |
+          yes | sdkmanager "ndk;26.1.10909125" --sdk_root="$ANDROID_SDK_ROOT"
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/26.1.10909125" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/26.1.10909125" >> "$GITHUB_ENV"
+
+      - name: Configure Gradle user home
+        run: |
+          mkdir -p ~/.gradle
+          echo "org.gradle.java.installations.fromEnv=JAVA_HOME" >> ~/.gradle/gradle.properties
+          echo "org.gradle.java.installations.auto-detect=true" >> ~/.gradle/gradle.properties
+          echo "Configured JAVA_HOME toolchain: $JAVA_HOME"
+
       - name: Cache Gradle
         uses: actions/cache@v4
         with:
@@ -42,14 +57,22 @@ jobs:
           key: gradle-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*', 'android/**/gradle-wrapper.properties') }}
           restore-keys: gradle-${{ runner.os }}-
 
-      - name: Setup Expo and EAS
-        uses: expo/expo-github-action@v8
-        with:
-          expo-version: latest
-          eas-version: latest
-
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
+
+      - name: Patch ExpoModulesCorePlugin for AGP 8.x
+        run: |
+          python3 -c "
+          with open('node_modules/expo-modules-core/android/ExpoModulesCorePlugin.gradle', 'r') as f:
+              content = f.read()
+          content = content.replace(
+              'from components.release',
+              'def _rc = project.components.findByName(\"release\"); if (_rc != null) { from _rc }'
+          )
+          with open('node_modules/expo-modules-core/android/ExpoModulesCorePlugin.gradle', 'w') as f:
+              f.write(content)
+          print('Patched ExpoModulesCorePlugin.gradle')
+          "
 
       - name: Download fonts
         run: |
@@ -72,21 +95,69 @@ jobs:
           echo "branch=$(echo ${GITHUB_REF#refs/heads/} | tr '/' '-')" >> $GITHUB_OUTPUT
           echo "build_time=$(date -u +%Y%m%d-%H%M)" >> $GITHUB_OUTPUT
 
+      - name: Make gradlew executable
+        run: chmod +x android/gradlew
+
+      - name: Create local.properties
+        run: echo "sdk.dir=$ANDROID_SDK_ROOT" > android/local.properties
+
+      - name: Generate debug keystore
+        run: |
+          keytool -genkeypair -v \
+            -keystore android/app/debug.keystore \
+            -storepass android -alias androiddebugkey -keypass android \
+            -keyalg RSA -keysize 2048 -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US" \
+            -noprompt
+
       - name: Build debug APK
         env:
           EXPO_PUBLIC_COMMIT_SHA: ${{ steps.version.outputs.short_sha }}
         run: |
-          eas build \
-            --platform android \
-            --profile development \
-            --local \
-            --non-interactive \
-            --output ./taskmind-debug.apk
+          set -o pipefail
+          cd android && ./gradlew :app:assembleDebug \
+            --no-daemon \
+            --stacktrace \
+            --info \
+            -PreactNativeArchitectures=arm64-v8a \
+            -Pandroid.injected.invoked.from.ide=false \
+            2>&1 | tee /tmp/gradle.log
+          BUILD_EXIT=${PIPESTATUS[0]}
+          echo "## Build Environment" >> $GITHUB_STEP_SUMMARY
+          echo "- JAVA_HOME: \`$JAVA_HOME\`" >> $GITHUB_STEP_SUMMARY
+          echo "- ANDROID_SDK_ROOT: \`$ANDROID_SDK_ROOT\`" >> $GITHUB_STEP_SUMMARY
+          echo "- ANDROID_NDK_HOME: \`$ANDROID_NDK_HOME\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Gradle Build Log" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### First 100 lines (config / startup errors)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          head -100 /tmp/gradle.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Key error lines (entire log)" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          grep -E "(FAILURE|FAILED|error:|BUILD FAILED|Exception|Could not|Caused by|Execution failed)" \
+            /tmp/gradle.log | head -60 >> $GITHUB_STEP_SUMMARY || true
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Last 200 lines" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -200 /tmp/gradle.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          if [ $BUILD_EXIT -ne 0 ]; then
+            grep -E "(FAILED|error:|> Task|BUILD FAILED|Exception|Could not|Caused by)" /tmp/gradle.log | tail -30 | while IFS= read -r line; do
+              echo "::error::$line"
+            done
+          fi
+          exit $BUILD_EXIT
 
-      - name: Rename APK with metadata
+      - name: Locate and rename APK
         run: |
-          mv ./taskmind-debug.apk \
-             "./taskmind-debug-${{ steps.version.outputs.branch }}-${{ steps.version.outputs.short_sha }}.apk"
+          APK_PATH=$(find android/app/build/outputs/apk/debug -name "*.apk" | head -1)
+          echo "Found APK at: $APK_PATH"
+          cp "$APK_PATH" \
+            "./taskmind-debug-${{ steps.version.outputs.branch }}-${{ steps.version.outputs.short_sha }}.apk"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
@@ -101,11 +172,31 @@ jobs:
         with:
           name: failure-logs-${{ github.run_id }}
           path: |
+            /tmp/gradle.log
             android/app/build/reports/
-            /tmp/eas-build-*.log
+            android/app/build/outputs/logs/
           retention-days: 7
 
+      - name: Post error summary to PR
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PR=$(gh pr list --head "$(git rev-parse --abbrev-ref HEAD)" --json number -q '.[0].number' 2>/dev/null || true)
+          if [ -z "$PR" ] || [ ! -f /tmp/gradle.log ]; then exit 0; fi
+          printf '## Build Failed (run %s)\n\n' "${{ github.run_id }}" > /tmp/comment.md
+          printf '### Error lines\n```\n' >> /tmp/comment.md
+          grep -E "(FAILURE|FAILED|BUILD FAILED|Exception|Could not|Caused by|Execution failed)" \
+            /tmp/gradle.log | head -40 >> /tmp/comment.md || true
+          printf '```\n\n### First 80 lines\n```\n' >> /tmp/comment.md
+          head -80 /tmp/gradle.log >> /tmp/comment.md
+          printf '```\n\n### Last 80 lines\n```\n' >> /tmp/comment.md
+          tail -80 /tmp/gradle.log >> /tmp/comment.md
+          printf '```\n' >> /tmp/comment.md
+          gh pr comment "$PR" --body-file /tmp/comment.md
+
       - name: Write step summary
+        if: success()
         run: |
           echo "## Debug APK Build Complete" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
