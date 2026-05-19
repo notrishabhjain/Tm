@@ -38,6 +38,14 @@ class ExpoModuleGradlePlugin implements Plugin<Project> {
                     abortOnError false
                 }
             }
+
+            // Add expo-modules-core and kotlin-stdlib (equivalent to useCoreDependencies())
+            project.dependencies {
+                if (!project.name.startsWith('expo-modules-core')) {
+                    add('implementation', project.project(':expo-modules-core'))
+                }
+                add('implementation', "org.jetbrains.kotlin:kotlin-stdlib-jdk7:${project.ext.kotlinVersion()}")
+            }
         }
     }
 }
