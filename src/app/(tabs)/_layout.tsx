@@ -1,5 +1,6 @@
 import React from 'react';
 import { Tabs } from 'expo-router';
+import { Home, CheckCircle2, Clock, Settings } from 'lucide-react-native';
 import { Colors } from '@/ui/theme/colors';
 
 export default function TabLayout(): React.JSX.Element {
@@ -20,7 +21,7 @@ export default function TabLayout(): React.JSX.Element {
         options={{
           title: 'Tasks',
           tabBarLabel: 'Home',
-          tabBarIcon: ({ color }) => <TabIcon label="⬜" color={color} />,
+          tabBarIcon: ({ color, size }) => <Home color={color} size={size} />,
         }}
       />
       <Tabs.Screen
@@ -28,7 +29,7 @@ export default function TabLayout(): React.JSX.Element {
         options={{
           title: 'Confirm',
           tabBarLabel: 'Confirm',
-          tabBarIcon: ({ color }) => <TabIcon label="?" color={color} />,
+          tabBarIcon: ({ color, size }) => <CheckCircle2 color={color} size={size} />,
         }}
       />
       <Tabs.Screen
@@ -36,7 +37,7 @@ export default function TabLayout(): React.JSX.Element {
         options={{
           title: 'History',
           tabBarLabel: 'History',
-          tabBarIcon: ({ color }) => <TabIcon label="◷" color={color} />,
+          tabBarIcon: ({ color, size }) => <Clock color={color} size={size} />,
         }}
       />
       <Tabs.Screen
@@ -44,24 +45,9 @@ export default function TabLayout(): React.JSX.Element {
         options={{
           title: 'Settings',
           tabBarLabel: 'Settings',
-          tabBarIcon: ({ color }) => <TabIcon label="⚙" color={color} />,
+          tabBarIcon: ({ color, size }) => <Settings color={color} size={size} />,
         }}
       />
     </Tabs>
-  );
-}
-
-function TabIcon({
-  label: _label,
-  color: _color,
-}: {
-  label: string;
-  color: string;
-}): React.JSX.Element {
-  return (
-    <React.Fragment>
-      {/* Placeholder icon — replace with lucide-react-native icons */}
-      <React.Fragment />
-    </React.Fragment>
   );
 }

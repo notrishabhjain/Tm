@@ -216,12 +216,14 @@ jobs:
             -dname "CN=Android Debug,O=Android,C=US" \
             -noprompt
 
-      - name: Build debug APK
+      - name: Build APK
         env:
           EXPO_PUBLIC_COMMIT_SHA: ${{ steps.version.outputs.short_sha }}
         run: |
           set -o pipefail
-          cd android && ./gradlew :app:assembleDebug \
+          # Build release variant — this bundles JS and does not show Expo Dev Client launcher.
+          # The release signingConfig already points to the debug keystore (see android/app/build.gradle).
+          cd android && ./gradlew :app:assembleRelease \
             --no-daemon \
             --stacktrace \
             --info \
@@ -260,7 +262,7 @@ jobs:
 
       - name: Locate and rename APK
         run: |
-          APK_PATH=$(find android/app/build/outputs/apk/debug -name "*.apk" | head -1)
+          APK_PATH=$(find android/app/build/outputs/apk/release -name "*.apk" | head -1)
           echo "Found APK at: $APK_PATH"
           cp "$APK_PATH" \
             "./taskmind-debug-${{ steps.version.outputs.branch }}-${{ steps.version.outputs.short_sha }}.apk"
