@@ -42,16 +42,22 @@ class AppErrorBoundary extends React.Component<
           <Text style={{ color: '#FF6B6B', fontSize: 16, fontWeight: '700', marginBottom: 10 }}>
             TaskMind crashed on startup
           </Text>
-          <Text style={{ color: '#FFD27A', fontSize: 11, fontFamily: 'monospace', marginBottom: 8 }}>
+          <Text
+            style={{ color: '#FFD27A', fontSize: 11, fontFamily: 'monospace', marginBottom: 8 }}
+          >
             {String(this.state.error)}
           </Text>
-          <Text style={{ color: '#A8C8FF', fontSize: 10, fontFamily: 'monospace', marginBottom: 8 }}>
+          <Text
+            style={{ color: '#A8C8FF', fontSize: 10, fontFamily: 'monospace', marginBottom: 8 }}
+          >
             STACK:
           </Text>
           <Text style={{ color: '#FFFFFF', fontSize: 9, fontFamily: 'monospace', marginBottom: 8 }}>
             {this.state.stack.slice(0, 2000)}
           </Text>
-          <Text style={{ color: '#A8C8FF', fontSize: 10, fontFamily: 'monospace', marginBottom: 8 }}>
+          <Text
+            style={{ color: '#A8C8FF', fontSize: 10, fontFamily: 'monospace', marginBottom: 8 }}
+          >
             COMPONENT STACK:
           </Text>
           <Text style={{ color: '#FFFFFF', fontSize: 9, fontFamily: 'monospace' }}>
