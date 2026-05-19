@@ -1,18 +1,29 @@
 import { drizzle } from 'drizzle-orm/expo-sqlite';
-import { openDatabaseSync } from 'expo-sqlite';
+import { openDatabaseSync, type SQLiteDatabase } from 'expo-sqlite';
 import * as schema from './schema';
 
-const sqlite = openDatabaseSync('taskmind.db', { enableChangeListener: true });
+let _sqlite: SQLiteDatabase | null = null;
+let _openError: unknown = null;
 
-export const db = drizzle(sqlite, { schema });
+try {
+  _sqlite = openDatabaseSync('taskmind.db', { enableChangeListener: true });
+} catch (e) {
+  _openError = e;
+}
 
-export type Database = typeof db;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const db = (_sqlite ? drizzle(_sqlite, { schema }) : null) as any;
+export type Database = ReturnType<typeof drizzle<typeof schema>>;
 
 export async function initializeDatabase(): Promise<void> {
-  // Run migrations manually since drizzle-kit expo migration format may vary
-  // We execute the initial SQL directly on first run
-  await sqlite.execAsync(`PRAGMA journal_mode=WAL;`);
-  await sqlite.execAsync(`
+  if (_openError !== null) {
+    throw _openError instanceof Error ? _openError : new Error(String(_openError));
+  }
+  if (!_sqlite) {
+    throw new Error('SQLite failed to open');
+  }
+  await _sqlite.execAsync(`PRAGMA journal_mode=WAL;`);
+  await _sqlite.execAsync(`
     CREATE TABLE IF NOT EXISTS tasks (
       id TEXT PRIMARY KEY NOT NULL,
       title TEXT NOT NULL,
