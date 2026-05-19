@@ -2,7 +2,6 @@ import React, { useEffect, useRef } from 'react';
 import { Text, View } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { ThemeProvider } from '@/ui/theme';
@@ -132,7 +131,7 @@ export default function RootLayout(): React.JSX.Element {
     <AppErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <GestureHandlerRootView style={{ flex: 1 }}>
+          <View style={{ flex: 1 }}>
             <Stack screenOptions={{ headerShown: false }}>
               <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
               <Stack.Screen name="onboarding" options={{ headerShown: false }} />
@@ -145,7 +144,7 @@ export default function RootLayout(): React.JSX.Element {
               <Stack.Screen name="settings/vip-contacts" options={{ presentation: 'card' }} />
               <Stack.Screen name="settings/nudges" options={{ presentation: 'card' }} />
             </Stack>
-          </GestureHandlerRootView>
+          </View>
         </ThemeProvider>
       </QueryClientProvider>
     </AppErrorBoundary>
