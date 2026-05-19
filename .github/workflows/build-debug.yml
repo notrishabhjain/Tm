@@ -94,7 +94,37 @@ jobs:
           print('Patched ReactHostWrapper.kt')
           PYEOF
 
-      - name: Download fonts
+      - name: Patch expo-dev-menu for RN 0.76
+        run: |
+          python3 << 'PYEOF'
+          import re, os
+
+          # Fix 1: PackagerConnectionSettings changed getters/setters to a Kotlin property in RN 0.76
+          path1 = 'node_modules/expo-dev-menu/android/src/main/java/expo/modules/devmenu/react/DevMenuPackagerConnectionSettings.kt'
+          with open(path1, 'r') as f:
+              content = f.read()
+          content = re.sub(
+              r'override fun getDebugServerHost\(\): String = serverIp\s*\n\s*override fun setDebugServerHost\(host: String\) = Unit',
+              'override var debugServerHost: String = serverIp',
+              content
+          )
+          with open(path1, 'w') as f:
+              f.write(content)
+          print('Patched DevMenuPackagerConnectionSettings.kt')
+
+          # Fix 2: ReactHostImpl.jsEngineResolutionAlgorithm was removed in RN 0.76
+          path2 = 'node_modules/expo-dev-menu/android/src/react-native-75/debug/expo/modules/devmenu/DevMenuReactHost.kt'
+          with open(path2, 'r') as f:
+              content = f.read()
+          content = re.sub(
+              r'\s*\.apply \{\s*jsEngineResolutionAlgorithm = jsResolutionAlgorithm\s*\}',
+              '',
+              content
+          )
+          with open(path2, 'w') as f:
+              f.write(content)
+          print('Patched DevMenuReactHost.kt')
+          PYEOF
         run: |
           FONT_DIR=assets/fonts
           BASE="https://github.com/rsms/inter/releases/download/v4.0"
