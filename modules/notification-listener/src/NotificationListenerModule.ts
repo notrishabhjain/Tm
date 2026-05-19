@@ -3,7 +3,8 @@ import type { NotificationData, PersistentNotificationParams, PermissionStatus }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let NativeModule: any = null;
-let emitter: EventEmitter | null = null;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let emitter: any = null;
 
 try {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
