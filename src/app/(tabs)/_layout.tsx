@@ -21,7 +21,9 @@ export default function TabLayout(): React.JSX.Element {
         options={{
           title: 'Tasks',
           tabBarLabel: 'Home',
-          tabBarIcon: ({ color, size }) => <Ionicons name="home-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="home-outline" size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -29,7 +31,9 @@ export default function TabLayout(): React.JSX.Element {
         options={{
           title: 'Confirm',
           tabBarLabel: 'Confirm',
-          tabBarIcon: ({ color, size }) => <Ionicons name="checkmark-circle-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="checkmark-circle-outline" size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -37,7 +41,9 @@ export default function TabLayout(): React.JSX.Element {
         options={{
           title: 'History',
           tabBarLabel: 'History',
-          tabBarIcon: ({ color, size }) => <Ionicons name="time-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="time-outline" size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -45,7 +51,9 @@ export default function TabLayout(): React.JSX.Element {
         options={{
           title: 'Settings',
           tabBarLabel: 'Settings',
-          tabBarIcon: ({ color, size }) => <Ionicons name="settings-outline" size={size} color={color} />,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="settings-outline" size={size} color={color} />
+          ),
         }}
       />
     </Tabs>
