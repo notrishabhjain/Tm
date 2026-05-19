@@ -64,11 +64,15 @@ export default function OnboardingVipScreen(): React.JSX.Element {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button label="Continue →" onPress={() => void router.push('/onboarding/done')} fullWidth />
+        <Button
+          label="Continue →"
+          onPress={() => void router.push('/onboarding/priority')}
+          fullWidth
+        />
         <Button
           label="Skip"
           variant="secondary"
-          onPress={() => void router.push('/onboarding/done')}
+          onPress={() => void router.push('/onboarding/priority')}
           fullWidth
         />
       </View>

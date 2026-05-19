@@ -9,6 +9,7 @@ import { ThemeProvider } from '@/ui/theme';
 import { initializeDatabase } from '@/data/db/client';
 import { getSetting } from '@/data/storage/settings';
 import { seedDatabaseIfNeeded } from '@/services/db-seeder';
+import '@/i18n';
 
 void SplashScreen.preventAutoHideAsync();
 
