@@ -8,7 +8,7 @@ let _db: any = null;
 let _openError: unknown = null;
 
 try {
-  _sqlite = openDatabaseSync('taskmind.db', { enableChangeListener: true });
+  _sqlite = openDatabaseSync('taskmind.db');
   _db = drizzle(_sqlite, { schema });
 } catch (e) {
   _openError = e;
