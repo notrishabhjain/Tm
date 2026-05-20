@@ -197,6 +197,11 @@ export default function RootLayout(): React.JSX.Element {
                 <Stack.Screen name="settings/vip-contacts" options={{ presentation: 'card' }} />
                 <Stack.Screen name="settings/nudges" options={{ presentation: 'card' }} />
                 <Stack.Screen name="settings/export-import" options={{ presentation: 'card' }} />
+                <Stack.Screen name="settings/ai-model" options={{ presentation: 'card' }} />
+                <Stack.Screen
+                  name="settings/transcript-import"
+                  options={{ presentation: 'card' }}
+                />
                 <Stack.Screen
                   name="share"
                   options={{ presentation: 'modal', headerShown: false }}
