@@ -22,7 +22,9 @@ export default function OnboardingDoneScreen(): React.JSX.Element {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 32, paddingBottom: insets.bottom + 24 }]}>
+    <View
+      style={[styles.container, { paddingTop: insets.top + 32, paddingBottom: insets.bottom + 24 }]}
+    >
       <View style={styles.content}>
         <View style={styles.checkCircle}>
           <Text style={styles.checkIcon}>✓</Text>

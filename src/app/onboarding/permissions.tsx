@@ -35,7 +35,9 @@ export default function OnboardingPermissionsScreen(): React.JSX.Element {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}>
+    <View
+      style={[styles.container, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}
+    >
       <View style={styles.content}>
         <Text style={styles.stepLabel}>Step 1 of 4</Text>
         <Text style={styles.title}>Grant Notification Access</Text>

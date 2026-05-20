@@ -9,7 +9,9 @@ export default function OnboardingWelcomeScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 32, paddingBottom: insets.bottom + 32 }]}>
+    <View
+      style={[styles.container, { paddingTop: insets.top + 32, paddingBottom: insets.bottom + 32 }]}
+    >
       <View style={styles.hero}>
         <Text style={styles.logo}>TaskMind</Text>
         <Text style={styles.tagline}>Turn every notification into action.</Text>

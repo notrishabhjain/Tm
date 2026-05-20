@@ -185,19 +185,22 @@ export default function RootLayout(): React.JSX.Element {
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
             <View style={{ flex: 1 }}>
-            <Stack screenOptions={{ headerShown: false }}>
-              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-              <Stack.Screen name="onboarding" options={{ headerShown: false }} />
-              <Stack.Screen name="task/[id]" options={{ presentation: 'card' }} />
-              <Stack.Screen name="settings/diagnostics" options={{ presentation: 'card' }} />
-              <Stack.Screen name="settings/vocabulary" options={{ presentation: 'card' }} />
-              <Stack.Screen name="settings/email-report" options={{ presentation: 'card' }} />
-              <Stack.Screen name="settings/battery-guide" options={{ presentation: 'card' }} />
-              <Stack.Screen name="settings/monitored-apps" options={{ presentation: 'card' }} />
-              <Stack.Screen name="settings/vip-contacts" options={{ presentation: 'card' }} />
-              <Stack.Screen name="settings/nudges" options={{ presentation: 'card' }} />
-              <Stack.Screen name="share" options={{ presentation: 'modal', headerShown: false }} />
-            </Stack>
+              <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                <Stack.Screen name="onboarding" options={{ headerShown: false }} />
+                <Stack.Screen name="task/[id]" options={{ presentation: 'card' }} />
+                <Stack.Screen name="settings/diagnostics" options={{ presentation: 'card' }} />
+                <Stack.Screen name="settings/vocabulary" options={{ presentation: 'card' }} />
+                <Stack.Screen name="settings/email-report" options={{ presentation: 'card' }} />
+                <Stack.Screen name="settings/battery-guide" options={{ presentation: 'card' }} />
+                <Stack.Screen name="settings/monitored-apps" options={{ presentation: 'card' }} />
+                <Stack.Screen name="settings/vip-contacts" options={{ presentation: 'card' }} />
+                <Stack.Screen name="settings/nudges" options={{ presentation: 'card' }} />
+                <Stack.Screen
+                  name="share"
+                  options={{ presentation: 'modal', headerShown: false }}
+                />
+              </Stack>
             </View>
           </ThemeProvider>
         </QueryClientProvider>
