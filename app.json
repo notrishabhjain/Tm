@@ -60,7 +60,8 @@
           ]
         }
       ],
-      "./modules/notification-listener/app.plugin.js"
+      "./modules/notification-listener/app.plugin.js",
+      "onnxruntime-react-native"
     ]
   }
 }

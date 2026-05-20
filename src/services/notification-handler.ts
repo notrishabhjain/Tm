@@ -10,6 +10,9 @@ import { MonitoredAppRepository } from '@/data/repositories/MonitoredAppReposito
 import { DiscardedLogRepository } from '@/data/repositories/DiscardedLogRepository';
 import { SenderStatsRepository } from '@/data/repositories/SenderStatsRepository';
 import { logCapturedNotification, logExtractionDecision } from './diagnostics-logger';
+import { LearnedKeywordRepository } from '@/data/repositories/LearnedKeywordRepository';
+import { extractNgrams, languageForText } from './ngram-extractor';
+import { isModelLoaded, classifyTaskProbability } from './onnx-classifier';
 import seedKeywordsRaw from '../../assets/seed-keywords.json';
 
 type RawKeyword = { keyword: string; language: string; priority_hint: string };
@@ -87,11 +90,25 @@ export async function handleNotification(taskData: {
   const senderStatsRepo = new SenderStatsRepository(db);
   const confidenceAdjustment = await senderStatsRepo.getConfidenceAdjustment(senderKey);
 
+  // Load active learned keywords and merge into vocabulary
+  const learnedRepo = new LearnedKeywordRepository(db);
+  const activeLearnedKws = await learnedRepo.getActive();
+  const learnedVocab: Keyword[] = activeLearnedKws.map((kw) => ({
+    phrase: kw.ngram,
+    category: 'IMPERATIVE' as Keyword['category'],
+    language: kw.language as Keyword['language'],
+    weight: kw.weight,
+  }));
+
+  const modelAvailable = isModelLoaded();
+  const modelWeight = modelAvailable ? 0.35 : 0.0;
+
   const config: PipelineConfig = {
-    vocabulary: SEED_VOCABULARY,
+    vocabulary: [...SEED_VOCABULARY, ...learnedVocab],
     vipSenders: allVipIds,
-    ruleWeight: 1.0 + confidenceAdjustment,
-    modelWeight: 0.0,
+    ruleWeight: (1.0 + confidenceAdjustment) * (1.0 - modelWeight),
+    modelWeight,
+    modelInferer: modelAvailable ? (text) => classifyTaskProbability(text) : undefined,
   };
 
   const pipelineInput = {
@@ -142,6 +159,15 @@ export async function handleNotification(taskData: {
 
   if (result.decision === 'CREATE') {
     await senderStatsRepo.incrementAutoAccept(senderKey);
+    // Record n-grams from auto-accepted tasks to build learned vocabulary
+    const ngrams = extractNgrams(pipelineInput.text, result.language);
+    if (ngrams.length > 0) {
+      try {
+        await learnedRepo.recordNgrams(ngrams, languageForText(result.language));
+      } catch {
+        // Non-fatal
+      }
+    }
   }
 
   try {

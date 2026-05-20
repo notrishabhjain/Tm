@@ -155,6 +155,11 @@ export default function SettingsScreen(): React.JSX.Element {
           subtitle={getSetting('email_enabled') ? 'Enabled' : 'Not configured'}
           onPress={() => void router.push('/settings/email-report')}
         />
+        <NavRow
+          label="Export / Import"
+          subtitle="JSON or CSV"
+          onPress={() => void router.push('/settings/export-import')}
+        />
       </Section>
 
       <Section title="Device">
