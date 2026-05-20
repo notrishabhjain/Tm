@@ -134,6 +134,16 @@ export default function SettingsScreen(): React.JSX.Element {
           label="Learned Vocabulary"
           onPress={() => void router.push('/settings/vocabulary')}
         />
+        <NavRow
+          label="AI Model"
+          subtitle="Semantic scoring (all-MiniLM-L6-v2)"
+          onPress={() => void router.push('/settings/ai-model')}
+        />
+        <NavRow
+          label="Analyze Text"
+          subtitle="Extract tasks from meetings or text"
+          onPress={() => void router.push('/settings/transcript-import')}
+        />
       </Section>
 
       <Section title="Nudges">
@@ -154,6 +164,11 @@ export default function SettingsScreen(): React.JSX.Element {
           label="Daily Email Report"
           subtitle={getSetting('email_enabled') ? 'Enabled' : 'Not configured'}
           onPress={() => void router.push('/settings/email-report')}
+        />
+        <NavRow
+          label="Export / Import"
+          subtitle="JSON or CSV"
+          onPress={() => void router.push('/settings/export-import')}
         />
       </Section>
 

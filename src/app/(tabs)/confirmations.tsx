@@ -8,12 +8,15 @@ import { Button } from '@/ui/components/Button';
 import { TaskRepository } from '@/data/repositories/TaskRepository';
 import { SenderStatsRepository } from '@/data/repositories/SenderStatsRepository';
 import { DiscardedLogRepository } from '@/data/repositories/DiscardedLogRepository';
+import { LearnedKeywordRepository } from '@/data/repositories/LearnedKeywordRepository';
 import { db } from '@/data/db/client';
+import { extractNgrams, languageForText } from '@/services/ngram-extractor';
 import type { Task } from '@/domain/types';
 
 const taskRepo = new TaskRepository(db);
 const senderStatsRepo = new SenderStatsRepository(db);
 const discardedRepo = new DiscardedLogRepository(db);
+const learnedKwRepo = new LearnedKeywordRepository(db);
 
 export default function ConfirmationsScreen(): React.JSX.Element {
   const queryClient = useQueryClient();
@@ -29,6 +32,16 @@ export default function ConfirmationsScreen(): React.JSX.Element {
       await taskRepo.confirmTask(task.id);
       const senderKey = task.sender ?? task.sourceApp;
       await senderStatsRepo.incrementConfirm(senderKey);
+      // User confirming a task is strong signal — record n-grams
+      const text = task.body ?? task.title;
+      const ngrams = extractNgrams(text, 'EN');
+      if (ngrams.length > 0) {
+        try {
+          await learnedKwRepo.recordNgrams(ngrams, languageForText('EN'));
+        } catch {
+          // Non-fatal
+        }
+      }
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tasks'] }),
   });

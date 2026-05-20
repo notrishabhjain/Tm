@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, Alert } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import * as Calendar from 'expo-calendar';
 import { Colors, getPriorityColor } from '@/ui/theme/colors';
 import { PriorityChip } from '@/ui/components/PriorityChip';
 import { Button } from '@/ui/components/Button';
@@ -10,10 +11,43 @@ import { db } from '@/data/db/client';
 
 const taskRepo = new TaskRepository(db);
 
+async function addToCalendar(title: string, notes: string | null): Promise<void> {
+  const { status } = await Calendar.requestCalendarPermissionsAsync();
+  if (status !== 'granted') {
+    Alert.alert('Permission Required', 'Calendar access is needed to add this task as an event.');
+    return;
+  }
+
+  const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
+  const writable = calendars.find(
+    (c) => c.allowsModifications && c.type !== Calendar.CalendarType.BIRTHDAYS
+  );
+  if (!writable) {
+    Alert.alert('No Calendar', 'No writable calendar found on this device.');
+    return;
+  }
+
+  const start = new Date();
+  start.setMinutes(0, 0, 0);
+  start.setHours(start.getHours() + 1);
+  const end = new Date(start.getTime() + 60 * 60 * 1000);
+
+  const eventId = await Calendar.createEventAsync(writable.id, {
+    title,
+    notes: notes ?? undefined,
+    startDate: start,
+    endDate: end,
+    alarms: [{ relativeOffset: -30 }],
+  });
+
+  return void eventId;
+}
+
 export default function TaskDetailScreen(): React.JSX.Element {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
+  const [calendarAdded, setCalendarAdded] = useState(false);
 
   const { data: task, isLoading } = useQuery({
     queryKey: ['task', id],
@@ -36,6 +70,19 @@ export default function TaskDetailScreen(): React.JSX.Element {
       router.back();
     },
   });
+
+  const handleAddToCalendar = (): void => {
+    if (!task) return;
+    void (async () => {
+      try {
+        await addToCalendar(task.title, task.body);
+        setCalendarAdded(true);
+        Alert.alert('Added to Calendar', 'Task has been added as a calendar event.');
+      } catch (err) {
+        Alert.alert('Calendar Error', String(err));
+      }
+    })();
+  };
 
   const handleDelete = (): void => {
     Alert.alert('Delete Task', 'This task will be moved to history.', [
@@ -85,6 +132,17 @@ export default function TaskDetailScreen(): React.JSX.Element {
           <InfoRow label="Captured" value={new Date(task.createdAt).toLocaleString('en-IN')} />
           <InfoRow label="Confidence" value={`${Math.round(task.confidence * 100)}%`} />
         </View>
+
+        {/* Calendar button */}
+        <Pressable
+          style={[styles.calendarBtn, calendarAdded && styles.calendarBtnDone]}
+          onPress={handleAddToCalendar}
+          disabled={calendarAdded}
+        >
+          <Text style={styles.calendarBtnText}>
+            {calendarAdded ? '✓ Added to Calendar' : '+ Add to Calendar'}
+          </Text>
+        </Pressable>
 
         {/* Body / original message */}
         {task.body && (
@@ -193,4 +251,20 @@ const styles = StyleSheet.create({
   },
   completeButton: { flex: 1 },
   deleteButton: { width: 100 },
+  calendarBtn: {
+    borderWidth: 1,
+    borderColor: Colors.primary500,
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  calendarBtnDone: {
+    borderColor: Colors.success,
+    backgroundColor: Colors.successBg,
+  },
+  calendarBtnText: {
+    fontSize: 14,
+    color: Colors.primary500,
+    fontWeight: '500',
+  },
 });
