@@ -11,6 +11,7 @@ import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnable
 import com.facebook.react.defaults.DefaultReactActivityDelegate
 
 import expo.modules.ReactActivityDelegateWrapper
+import expo.modules.notificationlistener.NotificationListenerModule
 
 class MainActivity : ReactActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
@@ -28,21 +29,7 @@ class MainActivity : ReactActivity() {
     if (intent.action == Intent.ACTION_SEND && intent.type?.startsWith("text/") == true) {
       val text = intent.getStringExtra(Intent.EXTRA_TEXT) ?: return
       val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT)
-      pendingShareText = text
-      pendingShareSubject = subject
-    }
-  }
-
-  companion object {
-    @Volatile var pendingShareText: String? = null
-    @Volatile var pendingShareSubject: String? = null
-
-    fun popShareIntent(): Map<String, String?>? {
-      val text = pendingShareText ?: return null
-      val subject = pendingShareSubject
-      pendingShareText = null
-      pendingShareSubject = null
-      return mapOf("text" to text, "subject" to subject)
+      NotificationListenerModule.setShareIntent(text, subject)
     }
   }
 
