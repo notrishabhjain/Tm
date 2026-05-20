@@ -85,11 +85,31 @@ class NotificationListenerModule : Module() {
             }
             context.startService(intent)
         }
+
+        AsyncFunction("getLastShareIntent") {
+            popShareIntent()
+        }
     }
 
     companion object {
         @Volatile
         var instance: NotificationListenerModule? = null
+
+        @Volatile private var pendingShareText: String? = null
+        @Volatile private var pendingShareSubject: String? = null
+
+        fun setShareIntent(text: String, subject: String?) {
+            pendingShareText = text
+            pendingShareSubject = subject
+        }
+
+        fun popShareIntent(): Map<String, String?>? {
+            val text = pendingShareText ?: return null
+            val subject = pendingShareSubject
+            pendingShareText = null
+            pendingShareSubject = null
+            return mapOf("text" to text, "subject" to subject)
+        }
 
         fun sendNotificationEvent(data: Map<String, Any>) {
             instance?.sendEvent("onNotification", data)
