@@ -1,8 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, Alert, ActivityIndicator } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Pressable,
+  Alert,
+  ActivityIndicator,
+  ScrollView,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/ui/theme/colors';
 import { Button } from '@/ui/components/Button';
+import * as FileSystem from 'expo-file-system';
 import {
   isModelCached,
   downloadModel,
@@ -10,12 +19,14 @@ import {
   getModelLocalPath,
 } from '@/services/model-manager';
 import { loadModel, isModelLoaded, resetModelLoadState } from '@/services/onnx-classifier';
-import * as FileSystem from 'expo-file-system';
+import { isLlmCached, downloadLlm, deleteLlm, getLlmSizeBytes } from '@/services/llm-manager';
+import { loadLlm, isLlmLoaded, unloadLlm } from '@/services/llm-service';
 
 type ModelStatus = 'checking' | 'not-downloaded' | 'downloading' | 'loading' | 'ready' | 'error';
 
-export default function AIModelScreen(): React.JSX.Element {
-  const router = useRouter();
+// ── MiniLM card ───────────────────────────────────────────────────────────────
+
+function MiniLmCard(): React.JSX.Element {
   const [status, setStatus] = useState<ModelStatus>('checking');
   const [progress, setProgress] = useState(0);
   const [errorMsg, setErrorMsg] = useState('');
@@ -34,18 +45,15 @@ export default function AIModelScreen(): React.JSX.Element {
     } catch {
       /* non-fatal */
     }
-
     if (isModelLoaded()) {
       setStatus('ready');
-    } else {
-      setStatus('loading');
-      const ok = await loadModel();
-      setStatus(ok ? 'ready' : 'error');
-      if (!ok)
-        setErrorMsg(
-          'Model file is downloaded but failed to load. Try deleting and re-downloading.'
-        );
+      return;
     }
+    setStatus('loading');
+    const ok = await loadModel();
+    setStatus(ok ? 'ready' : 'error');
+    if (!ok)
+      setErrorMsg('Model file downloaded but failed to load. Try deleting and re-downloading.');
   }, []);
 
   useEffect(() => {
@@ -71,7 +79,7 @@ export default function AIModelScreen(): React.JSX.Element {
         }
       } else {
         setStatus('error');
-        setErrorMsg('Download succeeded but model failed to initialise. Please try again.');
+        setErrorMsg('Download succeeded but model failed to initialise.');
       }
     } catch (err) {
       setStatus('error');
@@ -81,8 +89,8 @@ export default function AIModelScreen(): React.JSX.Element {
 
   const handleDelete = (): void => {
     Alert.alert(
-      'Delete AI model?',
-      'The model file (~22 MB) will be removed from device storage. Extraction will fall back to keyword rules only.',
+      'Delete classifier model?',
+      'The model file (~22 MB) will be removed. Extraction falls back to keyword rules only.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -100,78 +108,233 @@ export default function AIModelScreen(): React.JSX.Element {
   };
 
   return (
+    <ModelCard
+      name="all-MiniLM-L6-v2 (quantized)"
+      badge="Classifier · ~22 MB"
+      description="Sentence-embedding classifier for notification scoring. Runs at <500 ms per inference. Download optional — keyword rules cover most cases without it."
+      status={status}
+      progress={progress}
+      errorMsg={errorMsg}
+      sizeLabel={
+        sizeKb !== null && status === 'ready'
+          ? `${Math.round(sizeKb / 1024)} MB on device`
+          : undefined
+      }
+      onDownload={() => void handleDownload()}
+      onDelete={handleDelete}
+      downloadLabel="Download (~22 MB)"
+    />
+  );
+}
+
+// ── Qwen3 card ────────────────────────────────────────────────────────────────
+
+function Qwen3Card(): React.JSX.Element {
+  const [status, setStatus] = useState<ModelStatus>('checking');
+  const [progress, setProgress] = useState(0);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [sizeMb, setSizeMb] = useState<number | null>(null);
+
+  const refresh = useCallback(async () => {
+    setStatus('checking');
+    const cached = await isLlmCached();
+    if (!cached) {
+      setStatus('not-downloaded');
+      return;
+    }
+    try {
+      const bytes = await getLlmSizeBytes();
+      if (bytes > 0) setSizeMb(Math.round(bytes / (1024 * 1024)));
+    } catch {
+      /* non-fatal */
+    }
+    if (isLlmLoaded()) {
+      setStatus('ready');
+      return;
+    }
+    setStatus('loading');
+    const ok = await loadLlm();
+    setStatus(ok ? 'ready' : 'error');
+    if (!ok)
+      setErrorMsg('Model files present but failed to load. Try deleting and re-downloading.');
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const handleDownload = async (): Promise<void> => {
+    setStatus('downloading');
+    setProgress(0);
+    setErrorMsg('');
+    try {
+      await downloadLlm((p) => setProgress(p));
+      setStatus('loading');
+      const ok = await loadLlm();
+      if (ok) {
+        setStatus('ready');
+        try {
+          const bytes = await getLlmSizeBytes();
+          if (bytes > 0) setSizeMb(Math.round(bytes / (1024 * 1024)));
+        } catch {
+          /* non-fatal */
+        }
+      } else {
+        setStatus('error');
+        setErrorMsg('Download succeeded but model failed to load into memory.');
+      }
+    } catch (err) {
+      setStatus('error');
+      setErrorMsg(String(err));
+    }
+  };
+
+  const handleDelete = (): void => {
+    Alert.alert(
+      'Delete Qwen3 LLM?',
+      'All model files (~1 GB) will be removed. Screenshot and transcript analysis will fall back to keyword rules.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void unloadLlm()
+              .then(() => deleteLlm())
+              .then(() => {
+                setSizeMb(null);
+                setStatus('not-downloaded');
+              });
+          },
+        },
+      ]
+    );
+  };
+
+  return (
+    <ModelCard
+      name="Qwen3-1.7B Q4_K_M (offline LLM)"
+      badge="LLM · ~1.1 GB download"
+      description="Full language model (llama.cpp, GGUF) for rich task extraction from screenshots and meeting transcripts. Runs entirely on-device — no data ever leaves your phone. Requires ~1.5 GB free RAM."
+      status={status}
+      progress={progress}
+      errorMsg={errorMsg}
+      sizeLabel={sizeMb !== null && status === 'ready' ? `${sizeMb} MB on device` : undefined}
+      onDownload={() => void handleDownload()}
+      onDelete={handleDelete}
+      downloadLabel="Download (~1.1 GB)"
+    />
+  );
+}
+
+// ── Shared card component ─────────────────────────────────────────────────────
+
+interface ModelCardProps {
+  name: string;
+  badge: string;
+  description: string;
+  status: ModelStatus;
+  progress: number;
+  errorMsg: string;
+  sizeLabel?: string;
+  onDownload: () => void;
+  onDelete: () => void;
+  downloadLabel: string;
+}
+
+function ModelCard({
+  name,
+  badge,
+  description,
+  status,
+  progress,
+  errorMsg,
+  sizeLabel,
+  onDownload,
+  onDelete,
+  downloadLabel,
+}: ModelCardProps): React.JSX.Element {
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <Text style={styles.modelName}>{name}</Text>
+        <View style={styles.badgePill}>
+          <Text style={styles.badgeText}>{badge}</Text>
+        </View>
+      </View>
+      <Text style={styles.modelDesc}>{description}</Text>
+
+      <View style={styles.statusRow}>
+        <StatusIndicator status={status} />
+        {sizeLabel && <Text style={styles.sizeBadge}>{sizeLabel}</Text>}
+      </View>
+
+      {status === 'downloading' && (
+        <View style={styles.progressContainer}>
+          <View style={styles.progressTrack}>
+            <View style={[styles.progressFill, { width: `${Math.round(progress * 100)}%` }]} />
+          </View>
+          <Text style={styles.progressText}>{Math.round(progress * 100)}%</Text>
+        </View>
+      )}
+      {status === 'error' && (
+        <Text style={styles.errorText}>{errorMsg || 'An error occurred.'}</Text>
+      )}
+
+      <View style={styles.actionArea}>
+        {(status === 'not-downloaded' || status === 'error') && (
+          <Button label={downloadLabel} variant="primary" onPress={onDownload} />
+        )}
+        {status === 'downloading' && (
+          <View style={styles.centerRow}>
+            <ActivityIndicator color={Colors.primary500} />
+            <Text style={styles.downloadingText}>Downloading… {Math.round(progress * 100)}%</Text>
+          </View>
+        )}
+        {status === 'loading' && (
+          <View style={styles.centerRow}>
+            <ActivityIndicator color={Colors.primary500} />
+            <Text style={styles.downloadingText}>Loading model into memory…</Text>
+          </View>
+        )}
+        {status === 'ready' && (
+          <Button label="Delete Model" variant="destructive" onPress={onDelete} />
+        )}
+      </View>
+    </View>
+  );
+}
+
+// ── Root screen ───────────────────────────────────────────────────────────────
+
+export default function AIModelScreen(): React.JSX.Element {
+  const router = useRouter();
+
+  return (
     <View style={styles.container}>
       <View style={styles.header}>
         <Pressable onPress={() => router.back()} style={styles.backButton}>
           <Text style={styles.backText}>‹ Settings</Text>
         </Pressable>
-        <Text style={styles.title}>AI Model</Text>
+        <Text style={styles.title}>AI Models</Text>
         <View style={{ width: 70 }} />
       </View>
 
-      <View style={styles.content}>
-        <View style={styles.card}>
-          <Text style={styles.modelName}>all-MiniLM-L6-v2 (quantized)</Text>
-          <Text style={styles.modelDesc}>
-            A compact sentence-embedding model (~22 MB) that understands sentence meaning rather
-            than just keywords. When downloaded, it runs entirely on-device — no internet needed
-            during inference.
-          </Text>
+      <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.sectionLabel}>NOTIFICATION CLASSIFIER</Text>
+        <MiniLmCard />
 
-          <View style={styles.statusRow}>
-            <StatusIndicator status={status} />
-            {sizeKb !== null && status === 'ready' && (
-              <Text style={styles.sizeBadge}>{Math.round(sizeKb / 1024)} MB on device</Text>
-            )}
-          </View>
-
-          {status === 'downloading' && (
-            <View style={styles.progressContainer}>
-              <View style={styles.progressTrack}>
-                <View style={[styles.progressFill, { width: `${Math.round(progress * 100)}%` }]} />
-              </View>
-              <Text style={styles.progressText}>{Math.round(progress * 100)}%</Text>
-            </View>
-          )}
-
-          {status === 'error' && (
-            <Text style={styles.errorText}>{errorMsg || 'An error occurred.'}</Text>
-          )}
-        </View>
-
-        <View style={styles.actionArea}>
-          {(status === 'not-downloaded' || status === 'error') && (
-            <Button
-              label="Download Model (~22 MB)"
-              variant="primary"
-              onPress={() => void handleDownload()}
-            />
-          )}
-          {status === 'downloading' && (
-            <View style={styles.centerRow}>
-              <ActivityIndicator color={Colors.primary500} />
-              <Text style={styles.downloadingText}>Downloading… {Math.round(progress * 100)}%</Text>
-            </View>
-          )}
-          {status === 'loading' && (
-            <View style={styles.centerRow}>
-              <ActivityIndicator color={Colors.primary500} />
-              <Text style={styles.downloadingText}>Loading model into memory…</Text>
-            </View>
-          )}
-          {status === 'ready' && (
-            <Button label="Delete Model" variant="destructive" onPress={handleDelete} />
-          )}
-        </View>
+        <Text style={[styles.sectionLabel, { marginTop: 20 }]}>ON-DEVICE LANGUAGE MODEL</Text>
+        <Qwen3Card />
 
         <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>How scoring works</Text>
-          <InfoRow icon="▪" text="Without model: keyword + sentence structure rules only" />
-          <InfoRow icon="▪" text="With model: 35% semantic score + 65% rules (blended)" />
-          <InfoRow icon="▪" text="Inference runs in <500ms on-device, fully offline" />
-          <InfoRow icon="▪" text="Also used for meeting transcript analysis (F-11)" />
+          <Text style={styles.infoTitle}>How models are used</Text>
+          <InfoRow text="Classifier (MiniLM): blends with keyword rules for notification scoring" />
+          <InfoRow text="LLM (Qwen3): richer title extraction from screenshots & transcripts" />
+          <InfoRow text="Without LLM: keyword + sentence structure rules still work well" />
+          <InfoRow text="All inference runs 100% on-device — no network calls during use" />
         </View>
-      </View>
+      </ScrollView>
     </View>
   );
 }
@@ -194,10 +357,10 @@ function StatusIndicator({ status }: { status: ModelStatus }): React.JSX.Element
   );
 }
 
-function InfoRow({ icon, text }: { icon: string; text: string }): React.JSX.Element {
+function InfoRow({ text }: { text: string }): React.JSX.Element {
   return (
     <View style={styles.infoRow}>
-      <Text style={styles.infoIcon}>{icon}</Text>
+      <Text style={styles.infoIcon}>▪</Text>
       <Text style={styles.infoText}>{text}</Text>
     </View>
   );
@@ -217,7 +380,14 @@ const styles = StyleSheet.create({
   backButton: { padding: 4 },
   backText: { fontSize: 16, color: Colors.primary500, fontWeight: '600' },
   title: { fontSize: 17, fontWeight: '700', color: Colors.onSurfaceLight },
-  content: { padding: 16, gap: 16 },
+  content: { padding: 16, gap: 8, paddingBottom: 32 },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.onSurfaceVariantLight,
+    letterSpacing: 0.8,
+    marginBottom: 4,
+  },
   card: {
     backgroundColor: Colors.surfaceLight,
     borderRadius: 10,
@@ -225,7 +395,15 @@ const styles = StyleSheet.create({
     elevation: 1,
     gap: 10,
   },
-  modelName: { fontSize: 15, fontWeight: '700', color: Colors.onSurfaceLight },
+  cardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
+  modelName: { fontSize: 15, fontWeight: '700', color: Colors.onSurfaceLight, flex: 1 },
+  badgePill: {
+    backgroundColor: Colors.surfaceVariantLight,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  badgeText: { fontSize: 11, color: Colors.onSurfaceVariantLight, fontWeight: '500' },
   modelDesc: { fontSize: 13, color: Colors.onSurfaceVariantLight, lineHeight: 20 },
   statusRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   statusPill: { flexDirection: 'row', alignItems: 'center', gap: 6 },
@@ -242,7 +420,7 @@ const styles = StyleSheet.create({
   progressFill: { height: '100%', backgroundColor: Colors.primary500, borderRadius: 3 },
   progressText: { fontSize: 12, color: Colors.onSurfaceVariantLight, textAlign: 'right' },
   errorText: { fontSize: 12, color: Colors.error, lineHeight: 18 },
-  actionArea: { gap: 10 },
+  actionArea: { marginTop: 4 },
   centerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center' },
   downloadingText: { fontSize: 14, color: Colors.onSurfaceVariantLight },
   infoCard: {
@@ -250,6 +428,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 14,
     gap: 8,
+    marginTop: 12,
   },
   infoTitle: { fontSize: 13, fontWeight: '600', color: Colors.onSurfaceLight, marginBottom: 2 },
   infoRow: { flexDirection: 'row', gap: 8 },
