@@ -147,7 +147,14 @@ export default function TaskDetailScreen(): React.JSX.Element {
           {task.sender && <InfoRow label="From" value={task.sender} />}
           <InfoRow label="Captured" value={new Date(task.createdAt).toLocaleString('en-IN')} />
           {task.dueDate && (
-            <InfoRow label="Due" value={new Date(task.dueDate).toLocaleDateString('en-IN', { weekday: 'short', month: 'short', day: 'numeric' })} />
+            <InfoRow
+              label="Due"
+              value={new Date(task.dueDate).toLocaleDateString('en-IN', {
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric',
+              })}
+            />
           )}
           <InfoRow label="Confidence" value={`${Math.round(task.confidence * 100)}%`} />
         </View>

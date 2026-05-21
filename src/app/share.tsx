@@ -59,9 +59,19 @@ function parseWhatsAppShare(text: string): ParsedShare {
     /^\[(\d{1,2}\/\d{1,2}\/\d{2,4},\s*\d{1,2}:\d{2}\s*(?:AM|PM)?)\]\s+([^:]+):\s+([\s\S]+)$/i;
   const match = waPattern.exec(text.trim());
   if (match) {
-    return { sender: match[2].trim(), message: match[3].trim(), timestamp: match[1].trim(), rawText: text };
+    return {
+      sender: match[2].trim(),
+      message: match[3].trim(),
+      timestamp: match[1].trim(),
+      rawText: text,
+    };
   }
-  return { sender: '', message: text.trim(), timestamp: new Date().toLocaleString(), rawText: text };
+  return {
+    sender: '',
+    message: text.trim(),
+    timestamp: new Date().toLocaleString(),
+    rawText: text,
+  };
 }
 
 function formatDueDate(ts: number): string {
@@ -112,9 +122,9 @@ export default function ShareScreen(): React.JSX.Element {
         PIPELINE_CONFIG
       );
 
-      const suggestedTitle = pipelineResult.extractedTitle || (
-        p.sender ? `${p.sender}: ${p.message.slice(0, 60)}` : p.message.slice(0, 80)
-      );
+      const suggestedTitle =
+        pipelineResult.extractedTitle ||
+        (p.sender ? `${p.sender}: ${p.message.slice(0, 60)}` : p.message.slice(0, 80));
       setTitle(suggestedTitle);
       setPriority(pipelineResult.priority);
       if (pipelineResult.dueDate) setDueDate(pipelineResult.dueDate);
@@ -257,7 +267,12 @@ export default function ShareScreen(): React.JSX.Element {
             <Text style={styles.createBtnText}>✓ Create Task</Text>
           )}
         </Pressable>
-        <Button label="Discard" variant="secondary" onPress={() => void handleDiscard()} fullWidth />
+        <Button
+          label="Discard"
+          variant="secondary"
+          onPress={() => void handleDiscard()}
+          fullWidth
+        />
       </View>
     </View>
   );
@@ -352,7 +367,13 @@ const styles = StyleSheet.create({
     borderLeftColor: Colors.primary300,
   },
   messageText: { fontSize: 14, color: Colors.primary900, lineHeight: 20 },
-  footer: { padding: 16, gap: 10, backgroundColor: Colors.surfaceLight, borderTopWidth: 1, borderTopColor: Colors.outlineLight },
+  footer: {
+    padding: 16,
+    gap: 10,
+    backgroundColor: Colors.surfaceLight,
+    borderTopWidth: 1,
+    borderTopColor: Colors.outlineLight,
+  },
   createBtn: {
     borderRadius: 10,
     paddingVertical: 14,
