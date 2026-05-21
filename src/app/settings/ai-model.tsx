@@ -9,7 +9,7 @@ import {
   deleteModel,
   getModelLocalPath,
 } from '@/services/model-manager';
-import { loadModel, isModelLoaded } from '@/services/onnx-classifier';
+import { loadModel, isModelLoaded, resetModelLoadState } from '@/services/onnx-classifier';
 import * as FileSystem from 'expo-file-system';
 
 type ModelStatus = 'checking' | 'not-downloaded' | 'downloading' | 'loading' | 'ready' | 'error';
@@ -56,6 +56,7 @@ export default function AIModelScreen(): React.JSX.Element {
     setStatus('downloading');
     setProgress(0);
     setErrorMsg('');
+    resetModelLoadState();
     try {
       await downloadModel((p) => setProgress(p));
       setStatus('loading');

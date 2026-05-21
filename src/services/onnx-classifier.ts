@@ -267,6 +267,13 @@ export function isModelLoaded(): boolean {
   return session !== null && !sessionLoadFailed && taskPrototypes.length > 0;
 }
 
+export function resetModelLoadState(): void {
+  session = null;
+  taskPrototypes = [];
+  nonTaskPrototypes = [];
+  sessionLoadFailed = false;
+}
+
 export async function loadModel(): Promise<boolean> {
   if (session) return true;
   if (sessionLoadFailed) return false;
@@ -276,8 +283,10 @@ export async function loadModel(): Promise<boolean> {
   }
   if (!(await isModelCached())) return false;
   try {
+    // InferenceSession.create() expects a raw filesystem path, not a file:// URI
+    const rawPath = getModelLocalPath().replace(/^file:\/\//, '');
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
-    session = await InferenceSessionClass!.create(getModelLocalPath());
+    session = await InferenceSessionClass!.create(rawPath);
 
     // Embed all prototype sentences in parallel for multi-prototype classification
     const [taskEmbs, nonTaskEmbs] = await Promise.all([
