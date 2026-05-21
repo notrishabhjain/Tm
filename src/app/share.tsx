@@ -106,33 +106,35 @@ export default function ShareScreen(): React.JSX.Element {
         NotificationListener.getLatestScreenshot(),
       ]);
 
-      if (!intent?.text) {
-        setError('No shared text found. Please try sharing again from WhatsApp.');
+      if (screenshot) setScreenshotPath(screenshot);
+
+      if (!intent?.text && !screenshot) {
+        setError('Nothing was captured. Please try the accessibility button again.');
         setLoading(false);
         return;
       }
 
-      if (screenshot) setScreenshotPath(screenshot);
-
-      const p = parseWhatsAppShare(intent.text);
+      const rawText = intent?.text ?? '';
+      const p = parseWhatsAppShare(rawText);
       // For accessibility-captured text, sender is stored in intent.subject
-      const effectiveSender = p.sender || (intent.subject ?? '');
+      const effectiveSender = p.sender || (intent?.subject ?? '');
       const effectiveParsed = { ...p, sender: effectiveSender };
       setParsed(effectiveParsed);
 
-      const pipelineResult = await runExtractionPipeline(
-        { text: effectiveParsed.message, title: effectiveSender || undefined },
-        PIPELINE_CONFIG
-      );
-
-      const suggestedTitle =
-        pipelineResult.extractedTitle ||
-        (effectiveSender
-          ? `${effectiveSender}: ${effectiveParsed.message.slice(0, 60)}`
-          : effectiveParsed.message.slice(0, 80));
-      setTitle(suggestedTitle);
-      setPriority(pipelineResult.priority);
-      if (pipelineResult.dueDate) setDueDate(pipelineResult.dueDate);
+      if (rawText) {
+        const pipelineResult = await runExtractionPipeline(
+          { text: effectiveParsed.message, title: effectiveSender || undefined },
+          PIPELINE_CONFIG
+        );
+        const suggestedTitle =
+          pipelineResult.extractedTitle ||
+          (effectiveSender
+            ? `${effectiveSender}: ${effectiveParsed.message.slice(0, 60)}`
+            : effectiveParsed.message.slice(0, 80));
+        setTitle(suggestedTitle);
+        setPriority(pipelineResult.priority);
+        if (pipelineResult.dueDate) setDueDate(pipelineResult.dueDate);
+      }
     } catch {
       setError('Could not read shared content. Please try again.');
     } finally {

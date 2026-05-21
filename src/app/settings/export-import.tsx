@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useQueryClient } from '@tanstack/react-query';
 import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import * as DocumentPicker from 'expo-document-picker';
@@ -23,6 +24,7 @@ const taskRepo = new TaskRepository(db);
 
 export default function ExportImportScreen(): React.JSX.Element {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [importPreview, setImportPreview] = useState<{
     tasks: Partial<Task>[];
@@ -113,6 +115,7 @@ export default function ExportImportScreen(): React.JSX.Element {
       }
 
       setImportPreview(null);
+      void queryClient.invalidateQueries({ queryKey: ['tasks'] });
       Alert.alert('Import Complete', `${imported} task${imported !== 1 ? 's' : ''} imported.`);
     } catch (err) {
       Alert.alert('Import Failed', String(err));
