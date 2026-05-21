@@ -32,10 +32,10 @@ class TaskMindAccessibilityService : AccessibilityService() {
 
     // Bundled offline ML Kit recognizers — models ship inside the APK, no network needed.
     private val latinRecognizer by lazy {
-        TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+        TextRecognition.getClient(TextRecognizerOptions.Builder().build())
     }
     private val devanagariRecognizer by lazy {
-        TextRecognition.getClient(DevanagariTextRecognizerOptions.DEFAULT_OPTIONS)
+        TextRecognition.getClient(DevanagariTextRecognizerOptions.Builder().build())
     }
 
     override fun onServiceConnected() {
