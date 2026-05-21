@@ -19,12 +19,7 @@ import {
   getModelLocalPath,
 } from '@/services/model-manager';
 import { loadModel, isModelLoaded, resetModelLoadState } from '@/services/onnx-classifier';
-import {
-  isLlmCached,
-  downloadLlm,
-  deleteLlm,
-  getLlmSizeBytes,
-} from '@/services/llm-manager';
+import { isLlmCached, downloadLlm, deleteLlm, getLlmSizeBytes } from '@/services/llm-manager';
 import { loadLlm, isLlmLoaded, unloadLlm } from '@/services/llm-service';
 
 type ModelStatus = 'checking' | 'not-downloaded' | 'downloading' | 'loading' | 'ready' | 'error';
@@ -40,22 +35,35 @@ function MiniLmCard(): React.JSX.Element {
   const refresh = useCallback(async () => {
     setStatus('checking');
     const cached = await isModelCached();
-    if (!cached) { setStatus('not-downloaded'); return; }
+    if (!cached) {
+      setStatus('not-downloaded');
+      return;
+    }
     try {
       const info = await FileSystem.getInfoAsync(getModelLocalPath());
       if (info.exists && 'size' in info) setSizeKb(Math.round((info.size as number) / 1024));
-    } catch { /* non-fatal */ }
-    if (isModelLoaded()) { setStatus('ready'); return; }
+    } catch {
+      /* non-fatal */
+    }
+    if (isModelLoaded()) {
+      setStatus('ready');
+      return;
+    }
     setStatus('loading');
     const ok = await loadModel();
     setStatus(ok ? 'ready' : 'error');
-    if (!ok) setErrorMsg('Model file downloaded but failed to load. Try deleting and re-downloading.');
+    if (!ok)
+      setErrorMsg('Model file downloaded but failed to load. Try deleting and re-downloading.');
   }, []);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   const handleDownload = async (): Promise<void> => {
-    setStatus('downloading'); setProgress(0); setErrorMsg('');
+    setStatus('downloading');
+    setProgress(0);
+    setErrorMsg('');
     resetModelLoadState();
     try {
       await downloadModel((p) => setProgress(p));
@@ -66,12 +74,17 @@ function MiniLmCard(): React.JSX.Element {
         try {
           const info = await FileSystem.getInfoAsync(getModelLocalPath());
           if (info.exists && 'size' in info) setSizeKb(Math.round((info.size as number) / 1024));
-        } catch { /* non-fatal */ }
+        } catch {
+          /* non-fatal */
+        }
       } else {
         setStatus('error');
         setErrorMsg('Download succeeded but model failed to initialise.');
       }
-    } catch (err) { setStatus('error'); setErrorMsg(String(err)); }
+    } catch (err) {
+      setStatus('error');
+      setErrorMsg(String(err));
+    }
   };
 
   const handleDelete = (): void => {
@@ -80,9 +93,16 @@ function MiniLmCard(): React.JSX.Element {
       'The model file (~22 MB) will be removed. Extraction falls back to keyword rules only.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => {
-          void deleteModel().then(() => { setSizeKb(null); setStatus('not-downloaded'); });
-        }},
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void deleteModel().then(() => {
+              setSizeKb(null);
+              setStatus('not-downloaded');
+            });
+          },
+        },
       ]
     );
   };
@@ -95,7 +115,11 @@ function MiniLmCard(): React.JSX.Element {
       status={status}
       progress={progress}
       errorMsg={errorMsg}
-      sizeLabel={sizeKb !== null && status === 'ready' ? `${Math.round(sizeKb / 1024)} MB on device` : undefined}
+      sizeLabel={
+        sizeKb !== null && status === 'ready'
+          ? `${Math.round(sizeKb / 1024)} MB on device`
+          : undefined
+      }
       onDownload={() => void handleDownload()}
       onDelete={handleDelete}
       downloadLabel="Download (~22 MB)"
@@ -114,22 +138,35 @@ function Qwen3Card(): React.JSX.Element {
   const refresh = useCallback(async () => {
     setStatus('checking');
     const cached = await isLlmCached();
-    if (!cached) { setStatus('not-downloaded'); return; }
+    if (!cached) {
+      setStatus('not-downloaded');
+      return;
+    }
     try {
       const bytes = await getLlmSizeBytes();
       if (bytes > 0) setSizeMb(Math.round(bytes / (1024 * 1024)));
-    } catch { /* non-fatal */ }
-    if (isLlmLoaded()) { setStatus('ready'); return; }
+    } catch {
+      /* non-fatal */
+    }
+    if (isLlmLoaded()) {
+      setStatus('ready');
+      return;
+    }
     setStatus('loading');
     const ok = await loadLlm();
     setStatus(ok ? 'ready' : 'error');
-    if (!ok) setErrorMsg('Model files present but failed to load. Try deleting and re-downloading.');
+    if (!ok)
+      setErrorMsg('Model files present but failed to load. Try deleting and re-downloading.');
   }, []);
 
-  useEffect(() => { void refresh(); }, [refresh]);
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
 
   const handleDownload = async (): Promise<void> => {
-    setStatus('downloading'); setProgress(0); setErrorMsg('');
+    setStatus('downloading');
+    setProgress(0);
+    setErrorMsg('');
     try {
       await downloadLlm((p) => setProgress(p));
       setStatus('loading');
@@ -139,12 +176,17 @@ function Qwen3Card(): React.JSX.Element {
         try {
           const bytes = await getLlmSizeBytes();
           if (bytes > 0) setSizeMb(Math.round(bytes / (1024 * 1024)));
-        } catch { /* non-fatal */ }
+        } catch {
+          /* non-fatal */
+        }
       } else {
         setStatus('error');
         setErrorMsg('Download succeeded but model failed to load into memory.');
       }
-    } catch (err) { setStatus('error'); setErrorMsg(String(err)); }
+    } catch (err) {
+      setStatus('error');
+      setErrorMsg(String(err));
+    }
   };
 
   const handleDelete = (): void => {
@@ -153,10 +195,17 @@ function Qwen3Card(): React.JSX.Element {
       'All model files (~1 GB) will be removed. Screenshot and transcript analysis will fall back to keyword rules.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: () => {
-          unloadLlm();
-          void deleteLlm().then(() => { setSizeMb(null); setStatus('not-downloaded'); });
-        }},
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            unloadLlm();
+            void deleteLlm().then(() => {
+              setSizeMb(null);
+              setStatus('not-downloaded');
+            });
+          },
+        },
       ]
     );
   };
@@ -193,7 +242,16 @@ interface ModelCardProps {
 }
 
 function ModelCard({
-  name, badge, description, status, progress, errorMsg, sizeLabel, onDownload, onDelete, downloadLabel,
+  name,
+  badge,
+  description,
+  status,
+  progress,
+  errorMsg,
+  sizeLabel,
+  onDownload,
+  onDelete,
+  downloadLabel,
 }: ModelCardProps): React.JSX.Element {
   return (
     <View style={styles.card}>
@@ -218,7 +276,9 @@ function ModelCard({
           <Text style={styles.progressText}>{Math.round(progress * 100)}%</Text>
         </View>
       )}
-      {status === 'error' && <Text style={styles.errorText}>{errorMsg || 'An error occurred.'}</Text>}
+      {status === 'error' && (
+        <Text style={styles.errorText}>{errorMsg || 'An error occurred.'}</Text>
+      )}
 
       <View style={styles.actionArea}>
         {(status === 'not-downloaded' || status === 'error') && (
@@ -308,27 +368,39 @@ function InfoRow({ text }: { text: string }): React.JSX.Element {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.backgroundLight },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: 16, backgroundColor: Colors.surfaceLight,
-    borderBottomWidth: 1, borderBottomColor: Colors.outlineLight,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    backgroundColor: Colors.surfaceLight,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.outlineLight,
   },
   backButton: { padding: 4 },
   backText: { fontSize: 16, color: Colors.primary500, fontWeight: '600' },
   title: { fontSize: 17, fontWeight: '700', color: Colors.onSurfaceLight },
   content: { padding: 16, gap: 8, paddingBottom: 32 },
   sectionLabel: {
-    fontSize: 11, fontWeight: '600', color: Colors.onSurfaceVariantLight,
-    letterSpacing: 0.8, marginBottom: 4,
+    fontSize: 11,
+    fontWeight: '600',
+    color: Colors.onSurfaceVariantLight,
+    letterSpacing: 0.8,
+    marginBottom: 4,
   },
   card: {
-    backgroundColor: Colors.surfaceLight, borderRadius: 10,
-    padding: 16, elevation: 1, gap: 10,
+    backgroundColor: Colors.surfaceLight,
+    borderRadius: 10,
+    padding: 16,
+    elevation: 1,
+    gap: 10,
   },
   cardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: 8 },
   modelName: { fontSize: 15, fontWeight: '700', color: Colors.onSurfaceLight, flex: 1 },
   badgePill: {
-    backgroundColor: Colors.surfaceVariantLight, borderRadius: 6,
-    paddingHorizontal: 8, paddingVertical: 3,
+    backgroundColor: Colors.surfaceVariantLight,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
   },
   badgeText: { fontSize: 11, color: Colors.onSurfaceVariantLight, fontWeight: '500' },
   modelDesc: { fontSize: 13, color: Colors.onSurfaceVariantLight, lineHeight: 20 },
@@ -339,8 +411,10 @@ const styles = StyleSheet.create({
   sizeBadge: { fontSize: 12, color: Colors.onSurfaceVariantLight },
   progressContainer: { gap: 6 },
   progressTrack: {
-    height: 6, backgroundColor: Colors.outlineLight,
-    borderRadius: 3, overflow: 'hidden',
+    height: 6,
+    backgroundColor: Colors.outlineLight,
+    borderRadius: 3,
+    overflow: 'hidden',
   },
   progressFill: { height: '100%', backgroundColor: Colors.primary500, borderRadius: 3 },
   progressText: { fontSize: 12, color: Colors.onSurfaceVariantLight, textAlign: 'right' },
@@ -349,8 +423,11 @@ const styles = StyleSheet.create({
   centerRow: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center' },
   downloadingText: { fontSize: 14, color: Colors.onSurfaceVariantLight },
   infoCard: {
-    backgroundColor: Colors.surfaceVariantLight, borderRadius: 10,
-    padding: 14, gap: 8, marginTop: 12,
+    backgroundColor: Colors.surfaceVariantLight,
+    borderRadius: 10,
+    padding: 14,
+    gap: 8,
+    marginTop: 12,
   },
   infoTitle: { fontSize: 13, fontWeight: '600', color: Colors.onSurfaceLight, marginBottom: 2 },
   infoRow: { flexDirection: 'row', gap: 8 },

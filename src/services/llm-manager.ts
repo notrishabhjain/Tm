@@ -88,7 +88,12 @@ export async function downloadLlm(onProgress?: (fraction: number) => void): Prom
 
     // Skip if already present and non-empty
     const existing = await FileSystem.getInfoAsync(localPath);
-    if (existing.exists && 'size' in existing && typeof existing.size === 'number' && existing.size > 0) {
+    if (
+      existing.exists &&
+      'size' in existing &&
+      typeof existing.size === 'number' &&
+      existing.size > 0
+    ) {
       downloadedBytes += existing.size;
       reportProgress();
       continue;

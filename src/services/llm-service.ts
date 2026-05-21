@@ -89,7 +89,9 @@ export async function extractTaskFromText(text: string): Promise<LlmTaskResult |
     );
     const jsonStr = extractJson(raw);
     const parsed = JSON.parse(jsonStr) as Record<string, unknown>;
-    const title = String(parsed.title ?? '').slice(0, 120).trim();
+    const title = String(parsed.title ?? '')
+      .slice(0, 120)
+      .trim();
     if (!title) return null;
     let dueDate: number | null = null;
     if (typeof parsed.dueDate === 'string' && parsed.dueDate) {
@@ -124,7 +126,9 @@ export async function extractTasksFromTranscript(
     return parsed
       .slice(0, 20)
       .map((item: Record<string, unknown>) => ({
-        title: String(item.title ?? '').slice(0, 120).trim(),
+        title: String(item.title ?? '')
+          .slice(0, 120)
+          .trim(),
         priority: parsePriority(item.priority),
       }))
       .filter((t) => t.title.length > 0);
