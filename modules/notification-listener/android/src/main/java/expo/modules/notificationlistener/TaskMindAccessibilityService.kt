@@ -1,5 +1,6 @@
 package expo.modules.notificationlistener
 
+import android.accessibilityservice.AccessibilityButtonController
 import android.accessibilityservice.AccessibilityService
 import android.accessibilityservice.AccessibilityServiceInfo
 import android.graphics.Bitmap
@@ -20,13 +21,6 @@ class TaskMindAccessibilityService : AccessibilityService() {
     private val mainHandler = Handler(Looper.getMainLooper())
     private var lastShareSheetTime = 0L
 
-    companion object {
-        private val SHARE_SHEET_CLASSES = setOf(
-            "com.android.internal.app.ChooserActivity",
-            "com.android.intentresolver.ChooserActivity",
-        )
-    }
-
     override fun onServiceConnected() {
         super.onServiceConnected()
         serviceInfo = serviceInfo.also { info ->
@@ -36,6 +30,21 @@ class TaskMindAccessibilityService : AccessibilityService() {
             info.flags = AccessibilityServiceInfo.FLAG_RETRIEVE_INTERACTIVE_WINDOWS or
                     AccessibilityServiceInfo.FLAG_REQUEST_ACCESSIBILITY_BUTTON
             info.notificationTimeout = 100
+        }
+
+        // Register accessibility button callback (API 26+)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            accessibilityButtonController.registerAccessibilityButtonCallback(
+                object : AccessibilityButtonController.AccessibilityButtonCallback() {
+                    override fun onClicked(controller: AccessibilityButtonController) {
+                        handleAccessibilityButtonClick()
+                    }
+                    override fun onAvailabilityChanged(
+                        controller: AccessibilityButtonController,
+                        available: Boolean,
+                    ) {}
+                }
+            )
         }
     }
 
@@ -57,16 +66,13 @@ class TaskMindAccessibilityService : AccessibilityService() {
         }
     }
 
-    // Called when the user taps the floating accessibility button
-    override fun onAccessibilityButtonClicked(display: Display) {
+    private fun handleAccessibilityButtonClick() {
         val (packageName, extractedText, sender) = extractScreenText()
-
-        // Store as share intent so share.tsx can read it via the existing mechanism
         NotificationListenerModule.setShareIntent(extractedText, sender.ifBlank { null })
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             takeScreenshot(
-                display.displayId,
+                Display.DEFAULT_DISPLAY,
                 executor,
                 object : TakeScreenshotCallback {
                     override fun onSuccess(screenshot: ScreenshotResult) {
@@ -100,14 +106,11 @@ class TaskMindAccessibilityService : AccessibilityService() {
         sender: String,
         screenshotPath: String?,
     ) {
-        // Fire event to RN layer (handles case when app is already in foreground)
         NotificationListenerModule.sendManualTriggerEvent(packageName, extractedText, sender, screenshotPath)
 
-        // Also bring the app to foreground so the share screen opens
         mainHandler.post {
             try {
-                val launchIntent = packageManager.getLaunchIntentForPackage(packageName)
-                    ?: packageManager.getLaunchIntentForPackage(this.packageName)
+                val launchIntent = packageManager.getLaunchIntentForPackage(this.packageName)
                 launchIntent?.addFlags(
                     android.content.Intent.FLAG_ACTIVITY_NEW_TASK or
                             android.content.Intent.FLAG_ACTIVITY_SINGLE_TOP
@@ -138,8 +141,6 @@ class TaskMindAccessibilityService : AccessibilityService() {
         }
         traverse(root)
 
-        // The contact/group name is typically the first significant non-system text.
-        // Skip single chars, numeric-only, and very common UI strings.
         val skipPatterns = setOf("OK", "Cancel", "Back", "Done", "Send", "Menu")
         val sender = texts.firstOrNull { t ->
             t.length in 2..50 && !t.all { it.isDigit() || it == ':' } && t !in skipPatterns
