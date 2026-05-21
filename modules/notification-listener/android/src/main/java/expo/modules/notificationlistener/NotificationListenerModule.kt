@@ -89,6 +89,26 @@ class NotificationListenerModule : Module() {
         AsyncFunction("getLastShareIntent") {
             popShareIntent()
         }
+
+        AsyncFunction("peekShareIntent") {
+            val text = pendingShareText ?: return@AsyncFunction null
+            mapOf("text" to text, "subject" to pendingShareSubject)
+        }
+
+        AsyncFunction("clearShareIntent") {
+            pendingShareText = null
+            pendingShareSubject = null
+        }
+
+        AsyncFunction("getLatestScreenshot") {
+            val file = java.io.File(context.filesDir, "taskmind_share_screenshot.jpg")
+            if (file.exists()) file.absolutePath else null
+        }
+
+        AsyncFunction("clearLatestScreenshot") {
+            val file = java.io.File(context.filesDir, "taskmind_share_screenshot.jpg")
+            if (file.exists()) file.delete()
+        }
     }
 
     companion object {
