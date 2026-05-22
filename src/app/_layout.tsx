@@ -15,7 +15,12 @@ import { TaskRepository } from '@/data/repositories/TaskRepository';
 import { db } from '@/data/db/client';
 import { runExtractionPipeline } from '@/domain/extraction';
 import { DEFAULT_PIPELINE_CONFIG } from '@/domain/extraction/seedConfig';
-import { extractTaskFromText as llmExtractTask, isLlmLoaded } from '@/services/llm-service';
+import {
+  extractTaskFromText as llmExtractTask,
+  isLlmLoaded,
+  loadSmallLlm,
+} from '@/services/llm-service';
+import { isSmallLlmCached } from '@/services/llm-manager';
 import NotificationListener from '../../modules/notification-listener/src';
 import '@/i18n';
 
@@ -128,6 +133,10 @@ export default function RootLayout(): React.JSX.Element {
         await seedDatabaseIfNeeded();
         const nudgeFreq = getSetting('nudge_freq_minutes');
         void restoreNudgeFromSettings(nudgeFreq);
+        // Auto-load the 0.6B classifier if already downloaded — fire-and-forget
+        void isSmallLlmCached().then((cached) => {
+          if (cached) void loadSmallLlm();
+        });
       } catch (err) {
         console.error('DB init error (non-fatal):', err);
       }
@@ -303,6 +312,7 @@ export default function RootLayout(): React.JSX.Element {
                 <Stack.Screen name="settings/nudges" options={{ presentation: 'card' }} />
                 <Stack.Screen name="settings/export-import" options={{ presentation: 'card' }} />
                 <Stack.Screen name="settings/ai-model" options={{ presentation: 'card' }} />
+                <Stack.Screen name="settings/analytics" options={{ presentation: 'card' }} />
                 <Stack.Screen
                   name="settings/transcript-import"
                   options={{ presentation: 'card' }}

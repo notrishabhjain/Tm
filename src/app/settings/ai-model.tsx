@@ -19,8 +19,26 @@ import {
   getModelLocalPath,
 } from '@/services/model-manager';
 import { loadModel, isModelLoaded, resetModelLoadState } from '@/services/onnx-classifier';
-import { isLlmCached, downloadLlm, deleteLlm, getLlmSizeBytes } from '@/services/llm-manager';
-import { loadLlm, isLlmLoaded, unloadLlm } from '@/services/llm-service';
+import {
+  isLlmCached,
+  downloadLlm,
+  deleteLlm,
+  getLlmSizeBytes,
+  isSmallLlmCached,
+  downloadSmallLlm,
+  deleteSmallLlm,
+  getSmallLlmSizeBytes,
+} from '@/services/llm-manager';
+import {
+  loadLlm,
+  isLlmLoaded,
+  unloadLlm,
+  getLlmLoadError,
+  loadSmallLlm,
+  isSmallLlmLoaded,
+  unloadSmallLlm,
+  getSmallLlmLoadError,
+} from '@/services/llm-service';
 
 type ModelStatus = 'checking' | 'not-downloaded' | 'downloading' | 'loading' | 'ready' | 'error';
 
@@ -127,7 +145,118 @@ function MiniLmCard(): React.JSX.Element {
   );
 }
 
-// ── Qwen3 card ────────────────────────────────────────────────────────────────
+// ── Qwen3-0.6B card (notification classifier) ─────────────────────────────────
+
+function SmallLlmCard(): React.JSX.Element {
+  const [status, setStatus] = useState<ModelStatus>('checking');
+  const [progress, setProgress] = useState(0);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [sizeMb, setSizeMb] = useState<number | null>(null);
+
+  const refresh = useCallback(async () => {
+    setStatus('checking');
+    const cached = await isSmallLlmCached();
+    if (!cached) {
+      setStatus('not-downloaded');
+      return;
+    }
+    try {
+      const bytes = await getSmallLlmSizeBytes();
+      if (bytes > 0) setSizeMb(Math.round(bytes / (1024 * 1024)));
+    } catch {
+      /* non-fatal */
+    }
+    if (isSmallLlmLoaded()) {
+      setStatus('ready');
+      return;
+    }
+    setStatus('loading');
+    const ok = await loadSmallLlm();
+    setStatus(ok ? 'ready' : 'error');
+    if (!ok) {
+      const detail = getSmallLlmLoadError();
+      setErrorMsg(
+        detail
+          ? `Failed to load: ${detail}`
+          : 'Model files present but failed to load. Try deleting and re-downloading.'
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, [refresh]);
+
+  const handleDownload = async (): Promise<void> => {
+    setStatus('downloading');
+    setProgress(0);
+    setErrorMsg('');
+    try {
+      await downloadSmallLlm((p) => setProgress(p));
+      setStatus('loading');
+      const ok = await loadSmallLlm();
+      if (ok) {
+        setStatus('ready');
+        try {
+          const bytes = await getSmallLlmSizeBytes();
+          if (bytes > 0) setSizeMb(Math.round(bytes / (1024 * 1024)));
+        } catch {
+          /* non-fatal */
+        }
+      } else {
+        setStatus('error');
+        const detail = getSmallLlmLoadError();
+        setErrorMsg(
+          detail
+            ? `Downloaded OK but failed to load: ${detail}`
+            : 'Download succeeded but model failed to load. Delete and re-download if this persists.'
+        );
+      }
+    } catch (err) {
+      setStatus('error');
+      setErrorMsg(String(err));
+    }
+  };
+
+  const handleDelete = (): void => {
+    Alert.alert(
+      'Delete notification classifier?',
+      'The Qwen3-0.6B model (~380 MB) will be removed. Notification classification falls back to keyword rules.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            void unloadSmallLlm()
+              .then(() => deleteSmallLlm())
+              .then(() => {
+                setSizeMb(null);
+                setStatus('not-downloaded');
+              });
+          },
+        },
+      ]
+    );
+  };
+
+  return (
+    <ModelCard
+      name="Qwen3-0.6B Q4_K_M (classifier)"
+      badge="LLM · ~380 MB download"
+      description="Fast on-device LLM for notification classification. Understands context, negation, and intent — not just keywords. Learns from your confirm/reject history via few-shot examples. Stays loaded for background use."
+      status={status}
+      progress={progress}
+      errorMsg={errorMsg}
+      sizeLabel={sizeMb !== null && status === 'ready' ? `${sizeMb} MB on device` : undefined}
+      onDownload={() => void handleDownload()}
+      onDelete={handleDelete}
+      downloadLabel="Download (~380 MB)"
+    />
+  );
+}
+
+// ── Qwen3-1.7B card (screenshot / transcript extractor) ──────────────────────
 
 function Qwen3Card(): React.JSX.Element {
   const [status, setStatus] = useState<ModelStatus>('checking');
@@ -155,8 +284,14 @@ function Qwen3Card(): React.JSX.Element {
     setStatus('loading');
     const ok = await loadLlm();
     setStatus(ok ? 'ready' : 'error');
-    if (!ok)
-      setErrorMsg('Model files present but failed to load. Try deleting and re-downloading.');
+    if (!ok) {
+      const detail = getLlmLoadError();
+      setErrorMsg(
+        detail
+          ? `Failed to load: ${detail}`
+          : 'Model files present but failed to load. Try deleting and re-downloading.'
+      );
+    }
   }, []);
 
   useEffect(() => {
@@ -181,7 +316,12 @@ function Qwen3Card(): React.JSX.Element {
         }
       } else {
         setStatus('error');
-        setErrorMsg('Download succeeded but model failed to load into memory.');
+        const detail = getLlmLoadError();
+        setErrorMsg(
+          detail
+            ? `Downloaded OK but failed to load: ${detail}`
+            : 'Download succeeded but model failed to load. Delete and re-download if this persists.'
+        );
       }
     } catch (err) {
       setStatus('error');
@@ -191,8 +331,8 @@ function Qwen3Card(): React.JSX.Element {
 
   const handleDelete = (): void => {
     Alert.alert(
-      'Delete Qwen3 LLM?',
-      'All model files (~1 GB) will be removed. Screenshot and transcript analysis will fall back to keyword rules.',
+      'Delete Qwen3-1.7B?',
+      'The model file (~1.1 GB) will be removed. Screenshot and transcript analysis will fall back to keyword rules.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -213,9 +353,9 @@ function Qwen3Card(): React.JSX.Element {
 
   return (
     <ModelCard
-      name="Qwen3-1.7B Q4_K_M (offline LLM)"
+      name="Qwen3-1.7B Q4_K_M (extractor)"
       badge="LLM · ~1.1 GB download"
-      description="Full language model (llama.cpp, GGUF) for rich task extraction from screenshots and meeting transcripts. Runs entirely on-device — no data ever leaves your phone. Requires ~1.5 GB free RAM."
+      description="Larger model for rich task extraction from screenshots and meeting transcripts. Loaded on-demand when needed. Requires ~1.2 GB free RAM."
       status={status}
       progress={progress}
       errorMsg={errorMsg}
@@ -324,15 +464,20 @@ export default function AIModelScreen(): React.JSX.Element {
         <Text style={styles.sectionLabel}>NOTIFICATION CLASSIFIER</Text>
         <MiniLmCard />
 
-        <Text style={[styles.sectionLabel, { marginTop: 20 }]}>ON-DEVICE LANGUAGE MODEL</Text>
+        <Text style={[styles.sectionLabel, { marginTop: 20 }]}>ON-DEVICE LLM · CLASSIFIER</Text>
+        <SmallLlmCard />
+
+        <Text style={[styles.sectionLabel, { marginTop: 20 }]}>ON-DEVICE LLM · EXTRACTOR</Text>
         <Qwen3Card />
 
         <View style={styles.infoCard}>
           <Text style={styles.infoTitle}>How models are used</Text>
-          <InfoRow text="Classifier (MiniLM): blends with keyword rules for notification scoring" />
-          <InfoRow text="LLM (Qwen3): richer title extraction from screenshots & transcripts" />
-          <InfoRow text="Without LLM: keyword + sentence structure rules still work well" />
-          <InfoRow text="All inference runs 100% on-device — no network calls during use" />
+          <InfoRow text="0.6B Classifier: primary notification intelligence — understands context, learns from your history" />
+          <InfoRow text="1.7B Extractor: richer title extraction from screenshots & transcripts (on-demand)" />
+          <InfoRow text="MiniLM: blends with keyword rules when 0.6B classifier is not loaded" />
+          <InfoRow text="Without any LLM: keyword + sentence structure rules still work as fallback" />
+          <InfoRow text="All inference runs 100% on-device — no data ever leaves your phone" />
+          <InfoRow text="Only one LLM can be loaded at a time (RAM constraint)" />
         </View>
       </ScrollView>
     </View>
