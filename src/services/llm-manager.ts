@@ -1,27 +1,65 @@
 import * as FileSystem from 'expo-file-system';
 
-// ── Qwen3-1.7B (large extractor) ─────────────────────────────────────────────
+const LLM_FILENAME = 'taskmind_llm_model.gguf';
+const MIN_SIZE_BYTES = 200_000_000; // 200 MB — rejects corrupt/partial files
 
-const LARGE_GGUF_URL =
-  'https://huggingface.co/bartowski/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q4_K_M.gguf';
-const LARGE_GGUF_FILENAME = 'taskmind_qwen3_1.7b_q4km.gguf';
-const LARGE_MIN_SIZE_BYTES = 100_000_000;
+// Legacy filenames from the old two-model architecture — migrated on first access
+const LEGACY_FILENAMES = ['taskmind_qwen3_0.6b_q4km.gguf', 'taskmind_qwen3_1.7b_q4km.gguf'];
 
-// Display constants exported for the UI to show download instructions
-export const LARGE_GGUF_DISPLAY_REPO = 'bartowski/Qwen3-1.7B-GGUF';
-export const LARGE_GGUF_DISPLAY_FILENAME = 'Qwen3-1.7B-Q4_K_M.gguf';
-export { LARGE_GGUF_URL as LARGE_GGUF_DOWNLOAD_URL };
+// Recommended models shown in the UI — user can import either
+export const LLM_RECOMMENDED_MODELS = [
+  {
+    repo: 'bartowski/Qwen3-0.6B-GGUF',
+    filename: 'Qwen3-0.6B-Q4_K_M.gguf',
+    size: '~380 MB',
+    note: 'Lighter, stays in RAM comfortably, good Hindi support',
+  },
+  {
+    repo: 'bartowski/Llama-3.2-1B-Instruct-GGUF',
+    filename: 'Llama-3.2-1B-Instruct-Q4_K_M.gguf',
+    size: '~650 MB',
+    note: 'Stronger English extraction, better on complex cases',
+  },
+];
 
 export function getLlmModelPath(): string {
-  return `${FileSystem.documentDirectory ?? ''}${LARGE_GGUF_FILENAME}`;
+  return `${FileSystem.documentDirectory ?? ''}${LLM_FILENAME}`;
+}
+
+async function migrateFromLegacy(): Promise<boolean> {
+  const destPath = getLlmModelPath();
+  for (const legacy of LEGACY_FILENAMES) {
+    const legacyPath = `${FileSystem.documentDirectory ?? ''}${legacy}`;
+    try {
+      const info = await FileSystem.getInfoAsync(legacyPath);
+      if (
+        info.exists &&
+        'size' in info &&
+        typeof info.size === 'number' &&
+        info.size >= MIN_SIZE_BYTES
+      ) {
+        await FileSystem.moveAsync({ from: legacyPath, to: destPath });
+        return true;
+      }
+    } catch {
+      /* non-fatal — try next legacy name */
+    }
+  }
+  return false;
 }
 
 export async function isLlmCached(): Promise<boolean> {
   try {
     const info = await FileSystem.getInfoAsync(getLlmModelPath());
-    if (!info.exists) return false;
-    if ('size' in info && typeof info.size === 'number') return info.size >= LARGE_MIN_SIZE_BYTES;
-    return info.exists;
+    if (
+      info.exists &&
+      'size' in info &&
+      typeof info.size === 'number' &&
+      info.size >= MIN_SIZE_BYTES
+    ) {
+      return true;
+    }
+    return await migrateFromLegacy();
   } catch {
     return false;
   }
@@ -37,46 +75,6 @@ export async function getLlmSizeBytes(): Promise<number> {
   return 0;
 }
 
-export async function downloadLlm(onProgress?: (fraction: number) => void): Promise<void> {
-  const localPath = getLlmModelPath();
-
-  const downloadResumable = FileSystem.createDownloadResumable(
-    LARGE_GGUF_URL,
-    localPath,
-    {},
-    ({ totalBytesWritten, totalBytesExpectedToWrite }: FileSystem.DownloadProgressData) => {
-      if (totalBytesExpectedToWrite > 0) {
-        onProgress?.(totalBytesWritten / totalBytesExpectedToWrite);
-      }
-    }
-  );
-
-  const result = await downloadResumable.downloadAsync();
-  if (!result?.uri) {
-    throw new Error('Download failed — no response from server');
-  }
-  if (result.status !== 200) {
-    await FileSystem.deleteAsync(localPath, { idempotent: true }).catch(() => undefined);
-    throw new Error(`Download failed — server returned HTTP ${String(result.status)}`);
-  }
-  const info = await FileSystem.getInfoAsync(localPath);
-  const downloadedBytes =
-    info.exists && 'size' in info && typeof info.size === 'number' ? info.size : 0;
-  if (downloadedBytes < LARGE_MIN_SIZE_BYTES) {
-    await FileSystem.deleteAsync(localPath, { idempotent: true }).catch(() => undefined);
-    throw new Error(
-      `Download incomplete — received ${String(Math.round(downloadedBytes / 1_000_000))} MB, expected ≥${String(Math.round(LARGE_MIN_SIZE_BYTES / 1_000_000))} MB. Check your connection and try again.`
-    );
-  }
-  onProgress?.(1);
-}
-
-export async function deleteLlm(): Promise<void> {
-  const path = getLlmModelPath();
-  const info = await FileSystem.getInfoAsync(path);
-  if (info.exists) await FileSystem.deleteAsync(path, { idempotent: true });
-}
-
 export async function importLlmFromUri(sourceUri: string, fileSizeHint?: number): Promise<void> {
   const destPath = getLlmModelPath();
   await FileSystem.copyAsync({ from: sourceUri, to: destPath });
@@ -85,105 +83,16 @@ export async function importLlmFromUri(sourceUri: string, fileSizeHint?: number)
     info.exists && 'size' in info && typeof info.size === 'number'
       ? info.size
       : (fileSizeHint ?? 0);
-  if (size < LARGE_MIN_SIZE_BYTES) {
+  if (size < MIN_SIZE_BYTES) {
     await FileSystem.deleteAsync(destPath, { idempotent: true }).catch(() => undefined);
     throw new Error(
-      `File too small (${String(Math.round(size / 1_000_000))} MB) — expected a ~1.1 GB GGUF. Make sure you selected "${LARGE_GGUF_DISPLAY_FILENAME}".`
+      `File too small (${String(Math.round(size / 1_000_000))} MB). Expected a GGUF model ≥200 MB. Check you selected the right file.`
     );
   }
 }
 
-// ── Qwen3-0.6B (small classifier) ────────────────────────────────────────────
-
-const SMALL_GGUF_URL =
-  'https://huggingface.co/bartowski/Qwen3-0.6B-GGUF/resolve/main/Qwen3-0.6B-Q4_K_M.gguf';
-const SMALL_GGUF_FILENAME = 'taskmind_qwen3_0.6b_q4km.gguf';
-const SMALL_MIN_SIZE_BYTES = 50_000_000;
-
-export const SMALL_GGUF_DISPLAY_REPO = 'bartowski/Qwen3-0.6B-GGUF';
-export const SMALL_GGUF_DISPLAY_FILENAME = 'Qwen3-0.6B-Q4_K_M.gguf';
-export { SMALL_GGUF_URL as SMALL_GGUF_DOWNLOAD_URL };
-
-export function getSmallLlmModelPath(): string {
-  return `${FileSystem.documentDirectory ?? ''}${SMALL_GGUF_FILENAME}`;
-}
-
-export async function isSmallLlmCached(): Promise<boolean> {
-  try {
-    const info = await FileSystem.getInfoAsync(getSmallLlmModelPath());
-    if (!info.exists) return false;
-    if ('size' in info && typeof info.size === 'number') return info.size >= SMALL_MIN_SIZE_BYTES;
-    return info.exists;
-  } catch {
-    return false;
-  }
-}
-
-export async function getSmallLlmSizeBytes(): Promise<number> {
-  try {
-    const info = await FileSystem.getInfoAsync(getSmallLlmModelPath());
-    if (info.exists && 'size' in info && typeof info.size === 'number') return info.size;
-  } catch {
-    /* non-fatal */
-  }
-  return 0;
-}
-
-export async function downloadSmallLlm(onProgress?: (fraction: number) => void): Promise<void> {
-  const localPath = getSmallLlmModelPath();
-
-  const downloadResumable = FileSystem.createDownloadResumable(
-    SMALL_GGUF_URL,
-    localPath,
-    {},
-    ({ totalBytesWritten, totalBytesExpectedToWrite }: FileSystem.DownloadProgressData) => {
-      if (totalBytesExpectedToWrite > 0) {
-        onProgress?.(totalBytesWritten / totalBytesExpectedToWrite);
-      }
-    }
-  );
-
-  const result = await downloadResumable.downloadAsync();
-  if (!result?.uri) {
-    throw new Error('Download failed — no response from server');
-  }
-  if (result.status !== 200) {
-    await FileSystem.deleteAsync(localPath, { idempotent: true }).catch(() => undefined);
-    throw new Error(`Download failed — server returned HTTP ${String(result.status)}`);
-  }
-  const info = await FileSystem.getInfoAsync(localPath);
-  const downloadedBytes =
-    info.exists && 'size' in info && typeof info.size === 'number' ? info.size : 0;
-  if (downloadedBytes < SMALL_MIN_SIZE_BYTES) {
-    await FileSystem.deleteAsync(localPath, { idempotent: true }).catch(() => undefined);
-    throw new Error(
-      `Download incomplete — received ${String(Math.round(downloadedBytes / 1_000_000))} MB, expected ≥${String(Math.round(SMALL_MIN_SIZE_BYTES / 1_000_000))} MB. Check your connection and try again.`
-    );
-  }
-  onProgress?.(1);
-}
-
-export async function deleteSmallLlm(): Promise<void> {
-  const path = getSmallLlmModelPath();
+export async function deleteLlm(): Promise<void> {
+  const path = getLlmModelPath();
   const info = await FileSystem.getInfoAsync(path);
   if (info.exists) await FileSystem.deleteAsync(path, { idempotent: true });
-}
-
-export async function importSmallLlmFromUri(
-  sourceUri: string,
-  fileSizeHint?: number
-): Promise<void> {
-  const destPath = getSmallLlmModelPath();
-  await FileSystem.copyAsync({ from: sourceUri, to: destPath });
-  const info = await FileSystem.getInfoAsync(destPath);
-  const size =
-    info.exists && 'size' in info && typeof info.size === 'number'
-      ? info.size
-      : (fileSizeHint ?? 0);
-  if (size < SMALL_MIN_SIZE_BYTES) {
-    await FileSystem.deleteAsync(destPath, { idempotent: true }).catch(() => undefined);
-    throw new Error(
-      `File too small (${String(Math.round(size / 1_000_000))} MB) — expected a ~380 MB GGUF. Make sure you selected "${SMALL_GGUF_DISPLAY_FILENAME}".`
-    );
-  }
 }

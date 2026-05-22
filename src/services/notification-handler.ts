@@ -14,7 +14,7 @@ import { logCapturedNotification, logExtractionDecision } from './diagnostics-lo
 import { LearnedKeywordRepository } from '@/data/repositories/LearnedKeywordRepository';
 import { extractNgrams, languageForText } from './ngram-extractor';
 import { isModelLoaded, classifyTaskProbability } from './onnx-classifier';
-import { isSmallLlmLoaded, classifyNotification, type FewShotExample } from './llm-service';
+import { isLlmLoaded, classifyNotification, type FewShotExample } from './llm-service';
 import { desc, and, isNull, gt, eq } from 'drizzle-orm';
 import seedKeywordsRaw from '../../assets/seed-keywords.json';
 
@@ -165,7 +165,7 @@ export async function handleNotification(taskData: {
   const taskRepo = new TaskRepository(db);
 
   // ── Primary: LLM classification (Qwen3-0.6B) when loaded ────────────────────
-  if (isSmallLlmLoaded()) {
+  if (isLlmLoaded()) {
     const examples = await getFewShotExamples();
     const appName = notification.packageName.split('.').pop() ?? notification.packageName;
 

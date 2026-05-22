@@ -18,9 +18,9 @@ import { DEFAULT_PIPELINE_CONFIG } from '@/domain/extraction/seedConfig';
 import {
   extractTaskFromText as llmExtractTask,
   isLlmLoaded,
-  loadSmallLlm,
+  loadLlm,
 } from '@/services/llm-service';
-import { isSmallLlmCached } from '@/services/llm-manager';
+import { isLlmCached } from '@/services/llm-manager';
 import NotificationListener from '../../modules/notification-listener/src';
 import '@/i18n';
 
@@ -134,8 +134,8 @@ export default function RootLayout(): React.JSX.Element {
         const nudgeFreq = getSetting('nudge_freq_minutes');
         void restoreNudgeFromSettings(nudgeFreq);
         // Auto-load the 0.6B classifier if already downloaded — fire-and-forget
-        void isSmallLlmCached().then((cached) => {
-          if (cached) void loadSmallLlm();
+        void isLlmCached().then((cached) => {
+          if (cached) void loadLlm();
         });
       } catch (err) {
         console.error('DB init error (non-fatal):', err);

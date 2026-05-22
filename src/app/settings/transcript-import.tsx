@@ -271,7 +271,7 @@ export default function TranscriptImportScreen(): React.JSX.Element {
         <Text style={styles.inputHint}>
           Paste a meeting transcript, email thread, or any long text. TaskMind will extract
           actionable tasks from it.
-          {isLlmLoaded() ? ' Qwen3 LLM active.' : isModelLoaded() ? ' AI classifier active.' : ''}
+          {isLlmLoaded() ? ' LLM active.' : isModelLoaded() ? ' AI classifier active.' : ''}
         </Text>
 
         <View style={styles.textAreaWrapper}>
@@ -308,7 +308,7 @@ export default function TranscriptImportScreen(): React.JSX.Element {
             <ActivityIndicator color={Colors.primary500} />
             <Text style={styles.analyzingText}>
               {isLlmLoaded()
-                ? 'Running Qwen3 LLM extraction…'
+                ? 'Running LLM extraction…'
                 : `Running extraction pipeline${isModelLoaded() ? ' + AI scoring' : ''}…`}
             </Text>
           </View>

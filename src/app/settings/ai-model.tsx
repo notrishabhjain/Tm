@@ -25,25 +25,9 @@ import {
   deleteLlm,
   getLlmSizeBytes,
   importLlmFromUri,
-  LARGE_GGUF_DISPLAY_REPO,
-  LARGE_GGUF_DISPLAY_FILENAME,
-  isSmallLlmCached,
-  deleteSmallLlm,
-  getSmallLlmSizeBytes,
-  importSmallLlmFromUri,
-  SMALL_GGUF_DISPLAY_REPO,
-  SMALL_GGUF_DISPLAY_FILENAME,
+  LLM_RECOMMENDED_MODELS,
 } from '@/services/llm-manager';
-import {
-  loadLlm,
-  isLlmLoaded,
-  unloadLlm,
-  getLlmLoadError,
-  loadSmallLlm,
-  isSmallLlmLoaded,
-  unloadSmallLlm,
-  getSmallLlmLoadError,
-} from '@/services/llm-service';
+import { loadLlm, isLlmLoaded, unloadLlm, getLlmLoadError } from '@/services/llm-service';
 
 type ModelStatus =
   | 'checking'
@@ -157,125 +141,9 @@ function MiniLmCard(): React.JSX.Element {
   );
 }
 
-// ── Qwen3-0.6B card (notification classifier) ─────────────────────────────────
+// ── On-device LLM card (handles both tasks) ───────────────────────────────────
 
-function SmallLlmCard(): React.JSX.Element {
-  const [status, setStatus] = useState<ModelStatus>('checking');
-  const [errorMsg, setErrorMsg] = useState('');
-  const [sizeMb, setSizeMb] = useState<number | null>(null);
-
-  const refresh = useCallback(async () => {
-    setStatus('checking');
-    const cached = await isSmallLlmCached();
-    if (!cached) {
-      setStatus('not-downloaded');
-      return;
-    }
-    try {
-      const bytes = await getSmallLlmSizeBytes();
-      if (bytes > 0) setSizeMb(Math.round(bytes / (1024 * 1024)));
-    } catch {
-      /* non-fatal */
-    }
-    if (isSmallLlmLoaded()) {
-      setStatus('ready');
-      return;
-    }
-    setStatus('loading');
-    const ok = await loadSmallLlm();
-    setStatus(ok ? 'ready' : 'error');
-    if (!ok) {
-      const detail = getSmallLlmLoadError();
-      setErrorMsg(
-        detail
-          ? `Failed to load: ${detail}`
-          : 'Model present but failed to load. Try deleting and re-importing.'
-      );
-    }
-  }, []);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
-
-  const handleImport = async (): Promise<void> => {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: '*/*',
-      copyToCacheDirectory: false,
-    });
-    if (result.canceled || !result.assets?.[0]) return;
-    const asset = result.assets[0];
-    setStatus('copying');
-    setErrorMsg('');
-    try {
-      await importSmallLlmFromUri(asset.uri, asset.size);
-      setStatus('loading');
-      const ok = await loadSmallLlm();
-      if (ok) {
-        setStatus('ready');
-        try {
-          const bytes = await getSmallLlmSizeBytes();
-          if (bytes > 0) setSizeMb(Math.round(bytes / (1024 * 1024)));
-        } catch {
-          /* non-fatal */
-        }
-      } else {
-        setStatus('error');
-        const detail = getSmallLlmLoadError();
-        setErrorMsg(
-          detail
-            ? `Copied OK but failed to load: ${detail}`
-            : `File copied but model failed to load. Make sure you selected "${SMALL_GGUF_DISPLAY_FILENAME}".`
-        );
-      }
-    } catch (err) {
-      setStatus('error');
-      setErrorMsg(String(err));
-    }
-  };
-
-  const handleDelete = (): void => {
-    Alert.alert(
-      'Delete notification classifier?',
-      'The Qwen3-0.6B model (~380 MB) will be removed. Notification classification falls back to keyword rules.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            void unloadSmallLlm()
-              .then(() => deleteSmallLlm())
-              .then(() => {
-                setSizeMb(null);
-                setStatus('not-downloaded');
-              });
-          },
-        },
-      ]
-    );
-  };
-
-  return (
-    <ModelCard
-      name="Qwen3-0.6B Q4_K_M (classifier)"
-      badge="LLM · ~380 MB"
-      description="Fast on-device LLM for notification classification. Understands context, negation, and intent — not just keywords. Learns from your confirm/reject history via few-shot examples. Stays loaded for background use."
-      status={status}
-      progress={0}
-      errorMsg={errorMsg}
-      sizeLabel={sizeMb !== null && status === 'ready' ? `${sizeMb} MB on device` : undefined}
-      onImport={() => void handleImport()}
-      huggingFaceRepo={SMALL_GGUF_DISPLAY_REPO}
-      modelFileName={SMALL_GGUF_DISPLAY_FILENAME}
-      onDelete={handleDelete}
-    />
-  );
-}
-
-// ── Qwen3-1.7B card (screenshot / transcript extractor) ──────────────────────
-
-function Qwen3Card(): React.JSX.Element {
+function LlmCard(): React.JSX.Element {
   const [status, setStatus] = useState<ModelStatus>('checking');
   const [errorMsg, setErrorMsg] = useState('');
   const [sizeMb, setSizeMb] = useState<number | null>(null);
@@ -306,7 +174,7 @@ function Qwen3Card(): React.JSX.Element {
         !detail || detail.toLowerCase().includes('unknown') || detail.toLowerCase().includes('oom');
       setErrorMsg(
         isOom
-          ? 'Not enough free RAM to load the 1.7B model. Close other apps and try again, or restart your phone.'
+          ? 'Not enough free RAM. Close other apps and try again, or restart your phone.'
           : `Failed to load: ${detail}`
       );
     }
@@ -358,8 +226,8 @@ function Qwen3Card(): React.JSX.Element {
 
   const handleDelete = (): void => {
     Alert.alert(
-      'Delete Qwen3-1.7B?',
-      'The model file (~1.1 GB) will be removed. Screenshot and transcript analysis will fall back to keyword rules.',
+      'Delete LLM model?',
+      'The model file will be removed. Both notification classification and screenshot extraction will fall back to keyword rules.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -380,16 +248,14 @@ function Qwen3Card(): React.JSX.Element {
 
   return (
     <ModelCard
-      name="Qwen3-1.7B Q4_K_M (extractor)"
-      badge="LLM · ~1.1 GB"
-      description="Larger model for rich task extraction from screenshots and meeting transcripts. Loaded on-demand when needed. Requires ~1.2 GB free RAM."
+      name="On-device LLM"
+      badge="Both tasks"
+      description="Handles notification classification and screenshot extraction. Stays loaded in RAM. Import any compatible GGUF below."
       status={status}
       progress={0}
       errorMsg={errorMsg}
       sizeLabel={sizeMb !== null && status === 'ready' ? `${sizeMb} MB on device` : undefined}
       onImport={() => void handleImport()}
-      huggingFaceRepo={LARGE_GGUF_DISPLAY_REPO}
-      modelFileName={LARGE_GGUF_DISPLAY_FILENAME}
       onDelete={handleDelete}
     />
   );
@@ -460,14 +326,16 @@ function ModelCard({
       <View style={styles.actionArea}>
         {(status === 'not-downloaded' || status === 'error') && onImport && (
           <View style={styles.importSection}>
-            <View style={styles.downloadInfoBox}>
-              <Text style={styles.downloadInfoLabel}>Get this file from HuggingFace:</Text>
-              <Text style={styles.downloadInfoRepo}>huggingface.co/{huggingFaceRepo}</Text>
-              <Text style={styles.downloadInfoFile}>Filename: {modelFileName}</Text>
-              <Text style={styles.downloadInfoNote}>
-                Download on any device, transfer to phone, then select below.
-              </Text>
-            </View>
+            {huggingFaceRepo && modelFileName && (
+              <View style={styles.downloadInfoBox}>
+                <Text style={styles.downloadInfoLabel}>Get this file from HuggingFace:</Text>
+                <Text style={styles.downloadInfoRepo}>huggingface.co/{huggingFaceRepo}</Text>
+                <Text style={styles.downloadInfoFile}>Filename: {modelFileName}</Text>
+                <Text style={styles.downloadInfoNote}>
+                  Download on any device, transfer to phone, then select below.
+                </Text>
+              </View>
+            )}
             <Button label="Select GGUF File from Storage" variant="primary" onPress={onImport} />
           </View>
         )}
@@ -519,20 +387,30 @@ export default function AIModelScreen(): React.JSX.Element {
         <Text style={styles.sectionLabel}>NOTIFICATION CLASSIFIER</Text>
         <MiniLmCard />
 
-        <Text style={[styles.sectionLabel, { marginTop: 20 }]}>ON-DEVICE LLM · CLASSIFIER</Text>
-        <SmallLlmCard />
-
-        <Text style={[styles.sectionLabel, { marginTop: 20 }]}>ON-DEVICE LLM · EXTRACTOR</Text>
-        <Qwen3Card />
+        <Text style={[styles.sectionLabel, { marginTop: 20 }]}>ON-DEVICE LLM</Text>
+        <LlmCard />
 
         <View style={styles.infoCard}>
-          <Text style={styles.infoTitle}>How models are used</Text>
-          <InfoRow text="0.6B Classifier: primary notification intelligence — understands context, learns from your history" />
-          <InfoRow text="1.7B Extractor: richer title extraction from screenshots & transcripts (on-demand)" />
-          <InfoRow text="MiniLM: blends with keyword rules when 0.6B classifier is not loaded" />
+          <Text style={styles.infoTitle}>Recommended models (either works)</Text>
+          {LLM_RECOMMENDED_MODELS.map((m) => (
+            <View key={m.filename} style={styles.modelOptionRow}>
+              <View style={styles.modelOptionHeader}>
+                <Text style={styles.modelOptionRepo}>huggingface.co/{m.repo}</Text>
+                <Text style={styles.modelOptionSize}>{m.size}</Text>
+              </View>
+              <Text style={styles.modelOptionFile}>{m.filename}</Text>
+              <Text style={styles.modelOptionNote}>{m.note}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.infoCard}>
+          <Text style={styles.infoTitle}>How it works</Text>
+          <InfoRow text="One model handles both tasks: notification triage and screenshot extraction" />
+          <InfoRow text="Stays loaded in RAM — no reload between tasks" />
+          <InfoRow text="If busy (e.g. mid-extraction), notification classification falls back to keyword rules automatically" />
           <InfoRow text="Without any LLM: keyword + sentence structure rules still work as fallback" />
-          <InfoRow text="All inference runs 100% on-device — no data ever leaves your phone" />
-          <InfoRow text="Only one LLM can be loaded at a time (RAM constraint)" />
+          <InfoRow text="All inference runs 100% on-device — no data leaves your phone" />
         </View>
       </ScrollView>
     </View>
@@ -654,6 +532,25 @@ const styles = StyleSheet.create({
     marginTop: 4,
     lineHeight: 16,
   },
+  modelOptionRow: {
+    borderTopWidth: 1,
+    borderTopColor: Colors.outlineLight,
+    paddingTop: 8,
+    gap: 2,
+  },
+  modelOptionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  modelOptionRepo: { fontSize: 12, color: Colors.primary500, fontWeight: '500', flex: 1 },
+  modelOptionSize: { fontSize: 11, color: Colors.onSurfaceVariantLight },
+  modelOptionFile: {
+    fontSize: 11,
+    color: Colors.onSurfaceLight,
+    fontFamily: 'JetBrainsMono-Regular',
+  },
+  modelOptionNote: { fontSize: 11, color: Colors.onSurfaceVariantLight, lineHeight: 16 },
   infoCard: {
     backgroundColor: Colors.surfaceVariantLight,
     borderRadius: 10,

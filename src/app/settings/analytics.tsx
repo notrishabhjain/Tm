@@ -6,7 +6,7 @@ import { desc, eq, gt, and, sql } from 'drizzle-orm';
 import { Colors } from '@/ui/theme/colors';
 import { db } from '@/data/db/client';
 import { llmMetrics, trainingLog } from '@/data/db/schema';
-import { isSmallLlmLoaded, isLlmLoaded } from '@/services/llm-service';
+import { isLlmLoaded } from '@/services/llm-service';
 
 const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
 
@@ -170,20 +170,12 @@ export default function AnalyticsScreen(): React.JSX.Element {
         <Text style={[styles.sectionLabel, { marginTop: 20 }]}>MODEL STATUS</Text>
         <View style={styles.card}>
           <ModelStatusRow
-            label="Qwen3-0.6B (classifier)"
-            loaded={isSmallLlmLoaded()}
-            lastLoadMs={
-              loadHistory.find((r: { modelId: string }) => r.modelId === 'qwen3-0.6b')
-                ?.durationMs ?? null
-            }
-          />
-          <View style={styles.divider} />
-          <ModelStatusRow
-            label="Qwen3-1.7B (extractor)"
+            label="On-device LLM"
             loaded={isLlmLoaded()}
             lastLoadMs={
-              loadHistory.find((r: { modelId: string }) => r.modelId === 'qwen3-1.7b')
-                ?.durationMs ?? null
+              (loadHistory as Array<{ modelId: string; durationMs: number }>).find(
+                (r) => r.modelId === 'on-device-llm'
+              )?.durationMs ?? null
             }
           />
         </View>
