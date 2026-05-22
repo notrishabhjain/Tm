@@ -88,10 +88,12 @@ export async function loadLlm(): Promise<boolean> {
     const modelPath = getLlmModelPath().replace(/^file:\/\//, '');
     llamaCtxLarge = await initLlama({
       model: modelPath,
-      // n_ctx=1024 → KV cache ~115 MB; covers screenshot inputs (~600 tok) + output
-      n_ctx: 1024,
+      // n_ctx=512 → KV cache ~58 MB; sufficient for screenshot/short-transcript inputs
+      // Reduced from 1024 to avoid OOM on 4–6 GB RAM devices (1.1 GB weights + cache)
+      n_ctx: 512,
       n_threads: 4,
-      n_batch: 128,
+      n_batch: 32,
+      use_mlock: false,
     });
     void logLlmLoad('qwen3-1.7b', Date.now() - t0);
     return true;
@@ -276,9 +278,10 @@ export async function extractTaskFromText(text: string): Promise<LlmTaskResult |
     const result = await llamaCtxLarge.completion({
       messages: [
         { role: 'system', content: TASK_SYSTEM_PROMPT },
-        { role: 'user', content: `Extract the main task from:\n\n${text.slice(0, 2000)}` },
+        // 1000 char cap: fits within n_ctx=512 after system prompt (~80 tok) + output (~100 tok)
+        { role: 'user', content: `Extract the main task from:\n\n${text.slice(0, 1000)}` },
       ],
-      n_predict: 200,
+      n_predict: 120,
       temperature: 0.1,
       stop: STOP_TOKENS,
     });
@@ -317,10 +320,10 @@ export async function extractTasksFromTranscript(
     const result = await llamaCtxLarge.completion({
       messages: [
         { role: 'system', content: TRANSCRIPT_SYSTEM_PROMPT },
-        // Cap at 2500 chars — beyond that risks exceeding n_ctx=1024 on the large model
-        { role: 'user', content: `Extract all actionable tasks from:\n\n${text.slice(0, 2500)}` },
+        // Cap at 800 chars to fit within n_ctx=512 (system ~80 tok + output ~200 tok)
+        { role: 'user', content: `Extract all actionable tasks from:\n\n${text.slice(0, 800)}` },
       ],
-      n_predict: 800,
+      n_predict: 200,
       temperature: 0.1,
       stop: STOP_TOKENS,
     });

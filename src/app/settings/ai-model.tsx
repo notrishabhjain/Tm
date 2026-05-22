@@ -302,10 +302,12 @@ function Qwen3Card(): React.JSX.Element {
     setStatus(ok ? 'ready' : 'error');
     if (!ok) {
       const detail = getLlmLoadError();
+      const isOom =
+        !detail || detail.toLowerCase().includes('unknown') || detail.toLowerCase().includes('oom');
       setErrorMsg(
-        detail
-          ? `Failed to load: ${detail}`
-          : 'Model present but failed to load. Try deleting and re-importing.'
+        isOom
+          ? 'Not enough free RAM to load the 1.7B model. Close other apps and try again, or restart your phone.'
+          : `Failed to load: ${detail}`
       );
     }
   }, []);
@@ -338,10 +340,14 @@ function Qwen3Card(): React.JSX.Element {
       } else {
         setStatus('error');
         const detail = getLlmLoadError();
+        const isOom =
+          !detail ||
+          detail.toLowerCase().includes('unknown') ||
+          detail.toLowerCase().includes('oom');
         setErrorMsg(
-          detail
-            ? `Copied OK but failed to load: ${detail}`
-            : `File copied but model failed to load. Make sure you selected "${LARGE_GGUF_DISPLAY_FILENAME}".`
+          isOom
+            ? 'Not enough free RAM. Close other apps and try again, or restart your phone.'
+            : `Copied OK but failed to load: ${detail}`
         );
       }
     } catch (err) {
