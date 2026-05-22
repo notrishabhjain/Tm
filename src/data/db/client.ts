@@ -122,6 +122,19 @@ export function initializeDatabase(): void {
       confidence REAL NOT NULL,
       created_at INTEGER NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS llm_metrics (
+      id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+      model_id TEXT NOT NULL,
+      event_type TEXT NOT NULL,
+      duration_ms INTEGER NOT NULL,
+      decision TEXT,
+      confidence REAL,
+      input_length INTEGER,
+      created_at INTEGER NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_llm_metrics_created_at ON llm_metrics (created_at);
+    CREATE INDEX IF NOT EXISTS idx_llm_metrics_model ON llm_metrics (model_id);
   `);
 
   // Safe incremental migrations for existing installs.

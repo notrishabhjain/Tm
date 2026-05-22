@@ -135,9 +135,14 @@ export default function SettingsScreen(): React.JSX.Element {
           onPress={() => void router.push('/settings/vocabulary')}
         />
         <NavRow
-          label="AI Model"
-          subtitle="Semantic scoring (all-MiniLM-L6-v2)"
+          label="AI Models"
+          subtitle="0.6B classifier · 1.7B extractor · MiniLM"
           onPress={() => void router.push('/settings/ai-model')}
+        />
+        <NavRow
+          label="AI Analytics"
+          subtitle="Inference speed, accuracy, decision log"
+          onPress={() => void router.push('/settings/analytics')}
         />
         <NavRow
           label="Analyze Text"
