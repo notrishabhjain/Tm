@@ -1,113 +1,63 @@
-/**
- * llama.rn wrappers for both on-device LLMs.
- *
- * Two contexts, mutually exclusive (RAM constraint):
- *   llamaCtxSmall — Qwen3-0.6B, fast notification classifier, stays loaded
- *   llamaCtxLarge — Qwen3-1.7B, rich extractor for screenshots/transcripts, on-demand
- *
- * Loading one automatically unloads the other.
- */
-
 import { initLlama, type LlamaContext } from 'llama.rn';
-import { getLlmModelPath, getSmallLlmModelPath } from './llm-manager';
+import { getLlmModelPath } from './llm-manager';
 import { logLlmLoad, logLlmInference } from './analytics-logger';
 import type { Priority } from '@/domain/types';
 
 // ── State ─────────────────────────────────────────────────────────────────────
 
-let llamaCtxSmall: LlamaContext | null = null;
-let llamaCtxLarge: LlamaContext | null = null;
-let lastSmallLoadError: string | null = null;
-let lastLargeLoadError: string | null = null;
+let llamaCtx: LlamaContext | null = null;
+let lastLoadError: string | null = null;
+
+// Prevents concurrent inference calls on the same context.
+// If a notification arrives mid-screenshot-extraction, classification falls
+// back to the rule engine (returns null) rather than corrupting the context.
+let inferenceInProgress = false;
 
 // ── Status queries ────────────────────────────────────────────────────────────
 
-export function isSmallLlmLoaded(): boolean {
-  return llamaCtxSmall !== null;
-}
-
 export function isLlmLoaded(): boolean {
-  return llamaCtxLarge !== null;
-}
-
-export function getSmallLlmLoadError(): string | null {
-  return lastSmallLoadError;
+  return llamaCtx !== null;
 }
 
 export function getLlmLoadError(): string | null {
-  return lastLargeLoadError;
+  return lastLoadError;
 }
 
-// ── Small LLM (0.6B classifier) ───────────────────────────────────────────────
-
-export async function loadSmallLlm(): Promise<boolean> {
-  if (llamaCtxSmall) return true;
-  // Free RAM: only one context can be loaded at a time
-  if (llamaCtxLarge) await unloadLlm();
-  lastSmallLoadError = null;
-  const t0 = Date.now();
-  try {
-    const modelPath = getSmallLlmModelPath().replace(/^file:\/\//, '');
-    llamaCtxSmall = await initLlama({
-      model: modelPath,
-      // n_ctx=768 → KV cache ~42 MB for Qwen3-0.6B (28L × 8KV heads × 64 head_dim)
-      n_ctx: 768,
-      n_threads: 4,
-      n_batch: 64,
-    });
-    void logLlmLoad('qwen3-0.6b', Date.now() - t0);
-    return true;
-  } catch (err) {
-    lastSmallLoadError = err instanceof Error ? err.message : String(err);
-    llamaCtxSmall = null;
-    return false;
-  }
+export function isLlmBusy(): boolean {
+  return inferenceInProgress;
 }
 
-export async function unloadSmallLlm(): Promise<void> {
-  if (llamaCtxSmall) {
-    const ctx = llamaCtxSmall;
-    llamaCtxSmall = null;
-    try {
-      await ctx.release();
-    } catch {
-      /* non-fatal */
-    }
-  }
-}
-
-// ── Large LLM (1.7B extractor) ────────────────────────────────────────────────
+// ── Load / unload ─────────────────────────────────────────────────────────────
 
 export async function loadLlm(): Promise<boolean> {
-  if (llamaCtxLarge) return true;
-  // Free RAM: only one context can be loaded at a time
-  if (llamaCtxSmall) await unloadSmallLlm();
-  lastLargeLoadError = null;
+  if (llamaCtx) return true;
+  lastLoadError = null;
   const t0 = Date.now();
   try {
     const modelPath = getLlmModelPath().replace(/^file:\/\//, '');
-    llamaCtxLarge = await initLlama({
+    // n_ctx=768: fits classification (~300 tok) and extraction (~500 tok) with headroom.
+    // use_mlock=false: avoids mlock syscall failures on RAM-constrained devices.
+    // Compatible with Qwen3 and Llama GGUF models.
+    llamaCtx = await initLlama({
       model: modelPath,
-      // n_ctx=512 → KV cache ~58 MB; sufficient for screenshot/short-transcript inputs
-      // Reduced from 1024 to avoid OOM on 4–6 GB RAM devices (1.1 GB weights + cache)
-      n_ctx: 512,
+      n_ctx: 768,
       n_threads: 4,
-      n_batch: 32,
+      n_batch: 64,
       use_mlock: false,
     });
-    void logLlmLoad('qwen3-1.7b', Date.now() - t0);
+    void logLlmLoad('on-device-llm', Date.now() - t0);
     return true;
   } catch (err) {
-    lastLargeLoadError = err instanceof Error ? err.message : String(err);
-    llamaCtxLarge = null;
+    lastLoadError = err instanceof Error ? err.message : String(err);
+    llamaCtx = null;
     return false;
   }
 }
 
 export async function unloadLlm(): Promise<void> {
-  if (llamaCtxLarge) {
-    const ctx = llamaCtxLarge;
-    llamaCtxLarge = null;
+  if (llamaCtx) {
+    const ctx = llamaCtx;
+    llamaCtx = null;
     try {
       await ctx.release();
     } catch {
@@ -118,7 +68,7 @@ export async function unloadLlm(): Promise<void> {
 
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
-const STOP_TOKENS = ['<|im_end|>', '<|endoftext|>'];
+const STOP_TOKENS = ['<|im_end|>', '<|endoftext|>', '<|eot_id|>'];
 const VALID_PRIORITIES = new Set<string>(['URGENT', 'HIGH', 'MEDIUM', 'LOW']);
 
 function parsePriority(raw: unknown): Priority {
@@ -142,7 +92,7 @@ function getRawText(result: unknown): string {
   return String(r.content ?? r.text ?? '');
 }
 
-// ── Notification classification (small LLM) ───────────────────────────────────
+// ── Task 1: Notification classification (auto-triggered) ─────────────────────
 
 export interface FewShotExample {
   appName: string;
@@ -161,6 +111,7 @@ export interface ClassifyResult {
 }
 
 function buildClassificationPrompt(examples: FewShotExample[]): string {
+  // /no_think: Qwen3 directive to skip chain-of-thought (faster); ignored by Llama models
   const base =
     'You are a notification classifier. Decide if a notification requires the user to take action.\n\n' +
     'Output ONLY valid JSON with no explanation:\n' +
@@ -183,28 +134,27 @@ function buildClassificationPrompt(examples: FewShotExample[]): string {
   return `${base}\n\nRecent examples from this user:\n${lines.join('\n')}`;
 }
 
-/**
- * Classify a notification using the small LLM.
- * Returns null when the small LLM is not loaded or inference fails.
- * Falls back gracefully — callers should use the rule engine when null is returned.
- */
 export async function classifyNotification(params: {
   text: string;
   appName: string;
   sender: string | null;
   examples: FewShotExample[];
 }): Promise<ClassifyResult | null> {
-  if (!llamaCtxSmall || !params.text.trim()) return null;
+  if (!llamaCtx || !params.text.trim()) return null;
+  // If another inference is running (e.g. screenshot extraction), skip and fall
+  // back to the rule engine — better than queueing or corrupting the context.
+  if (inferenceInProgress) return null;
 
-  const systemPrompt = buildClassificationPrompt(params.examples);
-  const userMessage = `App:${params.appName}${params.sender ? ` | From:${params.sender}` : ''}\n${params.text.slice(0, 400)}`;
-
+  inferenceInProgress = true;
   const t0 = Date.now();
   try {
-    const result = await llamaCtxSmall.completion({
+    const result = await llamaCtx.completion({
       messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userMessage },
+        { role: 'system', content: buildClassificationPrompt(params.examples) },
+        {
+          role: 'user',
+          content: `App:${params.appName}${params.sender ? ` | From:${params.sender}` : ''}\n${params.text.slice(0, 400)}`,
+        },
       ],
       n_predict: 80,
       temperature: 0.1,
@@ -226,7 +176,6 @@ export async function classifyNotification(params: {
       actionable && typeof parsed.title === 'string' ? parsed.title.slice(0, 80).trim() : null;
     const priority = actionable ? parsePriority(parsed.priority) : 'LOW';
 
-    // Fire-and-forget metric logging
     const decision: 'CREATE' | 'CONFIRM' | 'DISCARD' = !actionable
       ? 'DISCARD'
       : confidence >= 0.75
@@ -235,7 +184,7 @@ export async function classifyNotification(params: {
           ? 'CONFIRM'
           : 'DISCARD';
     void logLlmInference({
-      modelId: 'qwen3-0.6b',
+      modelId: 'on-device-llm',
       durationMs,
       decision,
       confidence,
@@ -245,11 +194,14 @@ export async function classifyNotification(params: {
     return { actionable, confidence, title, priority, durationMs };
   } catch {
     return null;
+  } finally {
+    inferenceInProgress = false;
   }
 }
 
-// ── Screenshot / transcript extraction (large LLM) ────────────────────────────
+// ── Task 2: Screenshot / transcript extraction (on-demand) ───────────────────
 
+// /no_think: suppresses Qwen3 thinking tokens; Llama models treat it as plain text (harmless)
 const TASK_SYSTEM_PROMPT =
   'You are a task extraction assistant. Given text from a phone screen or message, ' +
   'extract the single most actionable task. Respond with ONLY a valid JSON object — ' +
@@ -267,18 +219,20 @@ const TRANSCRIPT_SYSTEM_PROMPT =
 export interface LlmTaskResult {
   title: string;
   priority: Priority;
-  /** Unix timestamp (ms) or null if no due date detected. */
   dueDate: number | null;
 }
 
 export async function extractTaskFromText(text: string): Promise<LlmTaskResult | null> {
-  if (!llamaCtxLarge || !text.trim()) return null;
+  if (!llamaCtx || !text.trim()) return null;
+  if (inferenceInProgress) return null;
+
+  inferenceInProgress = true;
   try {
     const t0 = Date.now();
-    const result = await llamaCtxLarge.completion({
+    const result = await llamaCtx.completion({
       messages: [
         { role: 'system', content: TASK_SYSTEM_PROMPT },
-        // 1000 char cap: fits within n_ctx=512 after system prompt (~80 tok) + output (~100 tok)
+        // 1000 chars ≈ 300 tokens; fits within n_ctx=768 with system prompt + output
         { role: 'user', content: `Extract the main task from:\n\n${text.slice(0, 1000)}` },
       ],
       n_predict: 120,
@@ -287,7 +241,7 @@ export async function extractTaskFromText(text: string): Promise<LlmTaskResult |
     });
 
     void logLlmInference({
-      modelId: 'qwen3-1.7b',
+      modelId: 'on-device-llm',
       durationMs: Date.now() - t0,
       decision: 'CREATE',
       confidence: 0.92,
@@ -309,21 +263,29 @@ export async function extractTaskFromText(text: string): Promise<LlmTaskResult |
     return { title, priority: parsePriority(parsed.priority), dueDate };
   } catch {
     return null;
+  } finally {
+    inferenceInProgress = false;
   }
 }
 
 export async function extractTasksFromTranscript(
   text: string
 ): Promise<Array<{ title: string; priority: Priority }>> {
-  if (!llamaCtxLarge || !text.trim()) return [];
+  if (!llamaCtx || !text.trim()) return [];
+  if (inferenceInProgress) return [];
+
+  inferenceInProgress = true;
   try {
-    const result = await llamaCtxLarge.completion({
+    const result = await llamaCtx.completion({
       messages: [
         { role: 'system', content: TRANSCRIPT_SYSTEM_PROMPT },
-        // Cap at 800 chars to fit within n_ctx=512 (system ~80 tok + output ~200 tok)
-        { role: 'user', content: `Extract all actionable tasks from:\n\n${text.slice(0, 800)}` },
+        // 800 chars ≈ 250 tokens; fits within n_ctx=768 with system prompt + output
+        {
+          role: 'user',
+          content: `Extract all actionable tasks from:\n\n${text.slice(0, 800)}`,
+        },
       ],
-      n_predict: 200,
+      n_predict: 300,
       temperature: 0.1,
       stop: STOP_TOKENS,
     });
@@ -342,5 +304,10 @@ export async function extractTasksFromTranscript(
       .filter((t) => t.title.length > 0);
   } catch {
     return [];
+  } finally {
+    inferenceInProgress = false;
   }
 }
+
+// Keep export alias so transcript-import.tsx continues to work
+export { extractTaskFromText as extractTaskFromTextLlm };
