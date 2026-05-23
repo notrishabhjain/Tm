@@ -12,6 +12,24 @@ import { extractNgrams, languageForText } from './ngram-extractor';
 import { scoreNotification, buildSenderKey } from './signal-scorer';
 import { resolveCancellation } from './cancellation-resolver';
 import { extractTitle } from './title-extractor';
+import { getSetting } from '@/data/storage/settings';
+
+// Returns true if the current local time falls within user-configured quiet hours.
+function isQuietHours(): boolean {
+  try {
+    const start = getSetting('quiet_hours_start'); // "HH:MM"
+    const end = getSetting('quiet_hours_end');
+    const [sh, sm] = start.split(':').map(Number);
+    const [eh, em] = end.split(':').map(Number);
+    const now = new Date();
+    const cur = now.getHours() * 60 + now.getMinutes();
+    const s = sh * 60 + sm;
+    const e = eh * 60 + em;
+    return s > e ? cur >= s || cur < e : cur >= s && cur < e; // handles midnight crossing
+  } catch {
+    return false;
+  }
+}
 
 // Jaccard similarity on word tokens — used for near-duplicate task detection.
 function titleSimilarity(a: string, b: string): number {
@@ -146,7 +164,15 @@ export async function handleNotification(taskData: {
   }
 
   // ── Create task ──────────────────────────────────────────────────────────────
-  const needsConfirmation = result.decision === 'CONFIRM';
+  const quietHours = isQuietHours();
+  const urgentOverride = getSetting('urgent_override_quiet');
+  const demoteToConfirm =
+    quietHours && result.decision === 'CREATE' && !(urgentOverride && result.priority === 'URGENT');
+  const needsConfirmation = result.decision === 'CONFIRM' || demoteToConfirm;
+  const matchedKeywords = demoteToConfirm
+    ? [...result.signals, 'quiet_hours_demotion']
+    : result.signals;
+
   await taskRepo.createTask({
     title: candidateTitle,
     body: notification.bigText || notification.text,
@@ -155,7 +181,7 @@ export async function handleNotification(taskData: {
     priority: result.priority,
     confidence: result.score,
     needsConfirmation,
-    matchedKeywords: result.signals,
+    matchedKeywords,
     language: 'EN',
     dueDate: result.extractedDeadline ?? null,
   });
