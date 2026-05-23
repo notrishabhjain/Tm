@@ -13,6 +13,8 @@ const DEFAULT_APPS = [
   { packageName: 'org.telegram.messenger', displayName: 'Telegram', selected: false },
 ];
 
+const DEPTH = 4;
+
 export default function OnboardingAppsScreen(): React.JSX.Element {
   const router = useRouter();
   const [apps, setApps] = useState(DEFAULT_APPS);
@@ -24,14 +26,15 @@ export default function OnboardingAppsScreen(): React.JSX.Element {
   };
 
   const handleContinue = async (): Promise<void> => {
-    // Store selected apps (in a real impl, this would call MonitoredAppRepository)
     void router.push('/onboarding/vip');
   };
 
+  const selectedCount = apps.filter((a) => a.selected).length;
+
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.stepLabel}>Step 2 of 4</Text>
+      <View style={styles.topSection}>
+        <Text style={styles.stepLabel}>STEP 2 OF 4</Text>
         <Text style={styles.title}>Choose Apps to Monitor</Text>
         <Text style={styles.description}>
           TaskMind will only process notifications from these apps. You can change this anytime in
@@ -43,24 +46,34 @@ export default function OnboardingAppsScreen(): React.JSX.Element {
         data={apps}
         keyExtractor={(item) => item.packageName}
         renderItem={({ item }) => (
-          <Pressable
-            style={[styles.appRow, item.selected && styles.appRowSelected]}
-            onPress={() => toggleApp(item.packageName)}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: item.selected }}
-          >
-            <View style={[styles.checkbox, item.selected && styles.checkboxSelected]}>
-              {item.selected && <View style={styles.checkmarkFill} />}
-            </View>
-            <Text style={styles.appName}>{item.displayName}</Text>
-          </Pressable>
+          <View style={[styles.rowWrapper, { paddingRight: DEPTH, paddingBottom: DEPTH }]}>
+            <View
+              style={[
+                styles.rowShadow,
+                item.selected && { backgroundColor: Colors.neoShadowDefault },
+              ]}
+            />
+            <Pressable
+              style={[styles.appRow, item.selected && styles.appRowSelected]}
+              onPress={() => toggleApp(item.packageName)}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: item.selected }}
+            >
+              <View style={[styles.checkbox, item.selected && styles.checkboxSelected]}>
+                {item.selected && <View style={styles.checkmarkFill} />}
+              </View>
+              <Text style={[styles.appName, item.selected && styles.appNameSelected]}>
+                {item.displayName}
+              </Text>
+            </Pressable>
+          </View>
         )}
         contentContainerStyle={styles.list}
       />
 
       <View style={styles.footer}>
         <Button
-          label={`Continue with ${apps.filter((a) => a.selected).length} apps →`}
+          label={`Continue with ${selectedCount} app${selectedCount !== 1 ? 's' : ''}`}
           onPress={() => void handleContinue()}
           fullWidth
         />
@@ -71,39 +84,55 @@ export default function OnboardingAppsScreen(): React.JSX.Element {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.backgroundLight },
-  header: { padding: 24, paddingBottom: 16 },
-  stepLabel: { fontSize: 12, color: Colors.onSurfaceVariantLight, marginBottom: 8 },
-  title: { fontSize: 26, fontWeight: '700', color: Colors.primary900, marginBottom: 12 },
-  description: { fontSize: 15, color: Colors.onSurfaceVariantLight, lineHeight: 24 },
-  list: { paddingHorizontal: 16, paddingBottom: 16 },
+  topSection: { padding: 24, paddingBottom: 16 },
+  stepLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.primary900,
+    letterSpacing: 1.2,
+    marginBottom: 12,
+  },
+  title: { fontSize: 26, fontWeight: '800', color: Colors.primary900, marginBottom: 12 },
+  description: { fontSize: 14, color: Colors.onSurfaceVariantLight, lineHeight: 22 },
+  list: { paddingHorizontal: 16, paddingBottom: 16, gap: 4 },
+  rowWrapper: { position: 'relative' },
+  rowShadow: {
+    position: 'absolute',
+    top: DEPTH,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: Colors.outlineLight,
+    borderRadius: 2,
+  },
   appRow: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 16,
     backgroundColor: Colors.surfaceLight,
-    borderRadius: 8,
-    marginBottom: 8,
-    elevation: 1,
+    borderRadius: 2,
+    borderWidth: 2,
+    borderColor: Colors.outlineLight,
     gap: 12,
   },
   appRowSelected: {
-    borderWidth: 1,
-    borderColor: Colors.primary500,
+    borderColor: Colors.primary900,
   },
   checkbox: {
-    width: 24,
-    height: 24,
-    borderRadius: 6,
+    width: 22,
+    height: 22,
+    borderRadius: 2,
     borderWidth: 2,
     borderColor: Colors.outlineLight,
     justifyContent: 'center',
     alignItems: 'center',
   },
   checkboxSelected: {
-    backgroundColor: Colors.primary500,
-    borderColor: Colors.primary500,
+    backgroundColor: Colors.primary900,
+    borderColor: Colors.primary900,
   },
-  checkmarkFill: { width: 10, height: 10, borderRadius: 2, backgroundColor: Colors.white },
+  checkmarkFill: { width: 8, height: 8, borderRadius: 1, backgroundColor: Colors.white },
   appName: { fontSize: 15, color: Colors.onSurfaceLight, fontWeight: '500' },
+  appNameSelected: { color: Colors.primary900, fontWeight: '700' },
   footer: { padding: 24, paddingTop: 16 },
 });

@@ -8,6 +8,7 @@ import { MonitoredAppRepository } from '@/data/repositories/MonitoredAppReposito
 import NotificationListener from '../../../modules/notification-listener/src';
 
 const repo = new MonitoredAppRepository(db);
+const DEPTH = 4;
 
 const COMMON_APPS = [
   { packageName: 'com.whatsapp', displayName: 'WhatsApp' },
@@ -34,7 +35,6 @@ export default function MonitoredAppsScreen(): React.JSX.Element {
   const toggleMutation = useMutation({
     mutationFn: async ({ packageName, isActive }: { packageName: string; isActive: boolean }) => {
       await repo.setActive(packageName, isActive);
-      // Sync active package names to native layer
       const activeNames = await repo.getActivePackageNames();
       await NotificationListener.setMonitoredApps(activeNames);
     },
@@ -60,7 +60,6 @@ export default function MonitoredAppsScreen(): React.JSX.Element {
     (packageName: string, displayName: string, isActive: boolean) => {
       const existing = appMap.get(packageName);
       if (!existing) {
-        // Auto-add then enable
         addAppMutation.mutate(
           { packageName, displayName },
           { onSuccess: () => toggleMutation.mutate({ packageName, isActive: true }) }
@@ -78,76 +77,82 @@ export default function MonitoredAppsScreen(): React.JSX.Element {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backBtn}>
-          <Text style={styles.backText}>‹ Back</Text>
+        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button">
+          <Text style={styles.backText}>Back</Text>
         </Pressable>
         <Text style={styles.title}>Monitored Apps</Text>
+        <View style={{ width: 56 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.description}>
-          TaskMind watches notifications from these apps and extracts actionable tasks.
           {activeCount > 0
-            ? ` ${activeCount} app${activeCount !== 1 ? 's' : ''} active.`
-            : ' No apps active — all notifications monitored.'}
+            ? `${activeCount} app${activeCount !== 1 ? 's' : ''} active — only these are monitored.`
+            : 'No apps selected — all notifications are monitored.'}
         </Text>
 
         <Text style={styles.sectionLabel}>COMMON APPS</Text>
-        <View style={styles.card}>
-          {COMMON_APPS.map((app, i) => {
-            const existing = appMap.get(app.packageName);
-            const isActive = existing?.isActive ?? false;
-            return (
-              <View
-                key={app.packageName}
-                style={[styles.row, i < COMMON_APPS.length - 1 && styles.rowBorder]}
-              >
-                <View style={styles.rowInfo}>
-                  <Text style={styles.appName}>{app.displayName}</Text>
-                  <Text style={styles.packageName}>{app.packageName}</Text>
+        <View style={[styles.cardWrapper, { paddingRight: DEPTH, paddingBottom: DEPTH }]}>
+          <View style={styles.cardShadow} />
+          <View style={styles.card}>
+            {COMMON_APPS.map((app, i) => {
+              const existing = appMap.get(app.packageName);
+              const isActive = existing?.isActive ?? false;
+              return (
+                <View
+                  key={app.packageName}
+                  style={[styles.row, i < COMMON_APPS.length - 1 && styles.rowBorder]}
+                >
+                  <View style={styles.rowInfo}>
+                    <Text style={styles.appName}>{app.displayName}</Text>
+                    <Text style={styles.packageName}>{app.packageName}</Text>
+                  </View>
+                  <Switch
+                    value={isActive}
+                    onValueChange={(v) => handleToggle(app.packageName, app.displayName, v)}
+                    trackColor={{ true: Colors.primary900, false: Colors.outlineLight }}
+                    thumbColor={Colors.white}
+                  />
                 </View>
-                <Switch
-                  value={isActive}
-                  onValueChange={(v) => handleToggle(app.packageName, app.displayName, v)}
-                  trackColor={{ true: Colors.primary500, false: Colors.outlineLight }}
-                  thumbColor={Colors.white}
-                />
-              </View>
-            );
-          })}
+              );
+            })}
+          </View>
         </View>
 
         {apps.some((a) => !COMMON_APPS.find((c) => c.packageName === a.packageName)) && (
           <>
             <Text style={styles.sectionLabel}>CUSTOM APPS</Text>
-            <View style={styles.card}>
-              {apps
-                .filter((a) => !COMMON_APPS.find((c) => c.packageName === a.packageName))
-                .map((app, i, arr) => (
-                  <View
-                    key={app.packageName}
-                    style={[styles.row, i < arr.length - 1 && styles.rowBorder]}
-                  >
-                    <View style={styles.rowInfo}>
-                      <Text style={styles.appName}>{app.displayName}</Text>
-                      <Text style={styles.packageName}>{app.packageName}</Text>
+            <View style={[styles.cardWrapper, { paddingRight: DEPTH, paddingBottom: DEPTH }]}>
+              <View style={styles.cardShadow} />
+              <View style={styles.card}>
+                {apps
+                  .filter((a) => !COMMON_APPS.find((c) => c.packageName === a.packageName))
+                  .map((app, i, arr) => (
+                    <View
+                      key={app.packageName}
+                      style={[styles.row, i < arr.length - 1 && styles.rowBorder]}
+                    >
+                      <View style={styles.rowInfo}>
+                        <Text style={styles.appName}>{app.displayName}</Text>
+                        <Text style={styles.packageName}>{app.packageName}</Text>
+                      </View>
+                      <Switch
+                        value={app.isActive}
+                        onValueChange={(v) =>
+                          toggleMutation.mutate({ packageName: app.packageName, isActive: v })
+                        }
+                        trackColor={{ true: Colors.primary900, false: Colors.outlineLight }}
+                        thumbColor={Colors.white}
+                      />
                     </View>
-                    <Switch
-                      value={app.isActive}
-                      onValueChange={(v) =>
-                        toggleMutation.mutate({ packageName: app.packageName, isActive: v })
-                      }
-                      trackColor={{ true: Colors.primary500, false: Colors.outlineLight }}
-                      thumbColor={Colors.white}
-                    />
-                  </View>
-                ))}
+                  ))}
+              </View>
             </View>
           </>
         )}
 
         <Pressable
-          style={styles.addButton}
+          style={({ pressed }) => [styles.addBtn, pressed && styles.addBtnPressed]}
           onPress={() =>
             Alert.prompt(
               'Add App',
@@ -158,17 +163,17 @@ export default function MonitoredAppsScreen(): React.JSX.Element {
                   text: 'Add',
                   onPress: (pkg) => {
                     const trimmed = pkg?.trim();
-                    if (trimmed) {
+                    if (trimmed)
                       addAppMutation.mutate({ packageName: trimmed, displayName: trimmed });
-                    }
                   },
                 },
               ],
               'plain-text'
             )
           }
+          accessibilityRole="button"
         >
-          <Text style={styles.addButtonText}>+ Add custom app</Text>
+          <Text style={styles.addBtnText}>+ Add custom app</Text>
         </Pressable>
       </ScrollView>
     </View>
@@ -180,57 +185,62 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 56,
-    paddingBottom: 12,
-    backgroundColor: Colors.surfaceLight,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.outlineLight,
-    gap: 12,
+    paddingVertical: 14,
+    backgroundColor: Colors.primary900,
+    borderBottomWidth: 2,
+    borderBottomColor: Colors.black,
   },
-  backBtn: { paddingVertical: 4 },
-  backText: { fontSize: 17, color: Colors.primary500 },
-  title: { fontSize: 17, fontWeight: '600', color: Colors.onSurfaceLight },
+  backBtn: { padding: 4, minWidth: 56 },
+  backText: { fontSize: 15, color: Colors.white, fontWeight: '600' },
+  title: { fontSize: 17, fontWeight: '800', color: Colors.white },
   content: { padding: 16, paddingBottom: 32 },
   description: {
-    fontSize: 14,
+    fontSize: 13,
     color: Colors.onSurfaceVariantLight,
     lineHeight: 20,
-    marginBottom: 20,
+    marginBottom: 16,
   },
   sectionLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: Colors.onSurfaceVariantLight,
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.primary900,
     textTransform: 'uppercase',
-    letterSpacing: 0.8,
+    letterSpacing: 1.2,
     marginBottom: 8,
-    marginLeft: 4,
+    marginTop: 4,
+  },
+  cardWrapper: { position: 'relative', marginBottom: 20 },
+  cardShadow: {
+    position: 'absolute',
+    top: DEPTH,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: Colors.neoShadowDefault,
+    borderRadius: 2,
   },
   card: {
     backgroundColor: Colors.surfaceLight,
-    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: Colors.primary900,
+    borderRadius: 2,
     overflow: 'hidden',
-    elevation: 1,
-    marginBottom: 24,
   },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-  },
+  row: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 },
   rowBorder: { borderBottomWidth: 1, borderBottomColor: Colors.outlineLight },
   rowInfo: { flex: 1 },
-  appName: { fontSize: 15, color: Colors.onSurfaceLight, fontWeight: '500' },
-  packageName: { fontSize: 12, color: Colors.onSurfaceVariantLight, marginTop: 2 },
-  addButton: {
+  appName: { fontSize: 15, color: Colors.onSurfaceLight, fontWeight: '600' },
+  packageName: { fontSize: 11, color: Colors.onSurfaceVariantLight, marginTop: 2 },
+  addBtn: {
+    height: 48,
+    borderWidth: 2,
+    borderColor: Colors.primary900,
+    borderRadius: 2,
+    justifyContent: 'center',
     alignItems: 'center',
-    padding: 14,
-    borderRadius: 8,
-    borderWidth: 1.5,
-    borderColor: Colors.primary500,
-    borderStyle: 'dashed',
   },
-  addButtonText: { fontSize: 14, color: Colors.primary500, fontWeight: '600' },
+  addBtnPressed: { backgroundColor: Colors.primary50 },
+  addBtnText: { fontSize: 14, color: Colors.primary900, fontWeight: '700' },
 });

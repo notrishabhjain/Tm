@@ -107,24 +107,6 @@ export const trainingLog = sqliteTable('training_log', {
   createdAt: integer('created_at').notNull(),
 });
 
-export const llmMetrics = sqliteTable(
-  'llm_metrics',
-  {
-    id: integer('id').primaryKey({ autoIncrement: true }),
-    modelId: text('model_id').notNull(), // 'qwen3-0.6b' | 'qwen3-1.7b'
-    eventType: text('event_type').notNull(), // 'load' | 'inference'
-    durationMs: integer('duration_ms').notNull(),
-    decision: text('decision'), // 'CREATE' | 'CONFIRM' | 'DISCARD'
-    confidence: real('confidence'),
-    inputLength: integer('input_length'),
-    createdAt: integer('created_at').notNull(),
-  },
-  (table) => ({
-    createdAtIdx: index('idx_llm_metrics_created_at').on(table.createdAt),
-    modelIdx: index('idx_llm_metrics_model').on(table.modelId),
-  })
-);
-
 export const discardedLog = sqliteTable('discarded_log', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   notificationId: text('notification_id').notNull().default(''),

@@ -7,29 +7,31 @@ import { Button } from '@/ui/components/Button';
 const LEVELS = [
   {
     label: 'URGENT',
-    color: Colors.urgentFg,
-    bg: Colors.urgentBgLight,
+    fg: Colors.urgentFg,
+    shadow: Colors.neoShadowUrgent,
     desc: 'Deadlines today, critical issues — keywords like "urgent", "ASAP", "deadline"',
   },
   {
     label: 'HIGH',
-    color: Colors.highFg,
-    bg: Colors.highBgLight,
+    fg: Colors.highFg,
+    shadow: Colors.neoShadowHigh,
     desc: 'Action needed soon, VIP senders — keywords like "please review", "waiting for you"',
   },
   {
     label: 'MEDIUM',
-    color: Colors.mediumFg,
-    bg: Colors.mediumBgLight,
+    fg: Colors.mediumFg,
+    shadow: Colors.neoShadowMedium,
     desc: 'Standard action items, replies needed, follow-ups',
   },
   {
     label: 'LOW',
-    color: Colors.lowFg,
-    bg: Colors.lowBgLight,
+    fg: Colors.lowFg,
+    shadow: Colors.neoShadowLow,
     desc: 'FYIs, soft requests, informational messages',
   },
 ] as const;
+
+const DEPTH = 4;
 
 export default function OnboardingPriorityScreen(): React.JSX.Element {
   const router = useRouter();
@@ -37,7 +39,7 @@ export default function OnboardingPriorityScreen(): React.JSX.Element {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.stepLabel}>Step 4 of 5</Text>
+        <Text style={styles.stepLabel}>STEP 4 OF 5</Text>
         <Text style={styles.title}>How Priorities Work</Text>
         <Text style={styles.description}>
           TaskMind automatically assigns priorities based on keywords and urgency signals in your
@@ -46,11 +48,17 @@ export default function OnboardingPriorityScreen(): React.JSX.Element {
 
         <View style={styles.levels}>
           {LEVELS.map((level) => (
-            <View key={level.label} style={[styles.levelCard, { backgroundColor: level.bg }]}>
-              <View style={[styles.badge, { backgroundColor: level.color }]}>
-                <Text style={styles.badgeText}>{level.label}</Text>
+            <View
+              key={level.label}
+              style={[styles.levelWrapper, { paddingRight: DEPTH, paddingBottom: DEPTH }]}
+            >
+              <View style={[styles.levelShadow, { backgroundColor: level.shadow }]} />
+              <View style={[styles.levelCard, { borderColor: level.fg }]}>
+                <View style={[styles.badge, { backgroundColor: level.fg }]}>
+                  <Text style={styles.badgeText}>{level.label}</Text>
+                </View>
+                <Text style={styles.levelDesc}>{level.desc}</Text>
               </View>
-              <Text style={styles.levelDesc}>{level.desc}</Text>
             </View>
           ))}
         </View>
@@ -61,11 +69,7 @@ export default function OnboardingPriorityScreen(): React.JSX.Element {
       </View>
 
       <View style={styles.footer}>
-        <Button
-          label="Continue →"
-          onPress={() => void router.push('/onboarding/nudges')}
-          fullWidth
-        />
+        <Button label="Continue" onPress={() => void router.push('/onboarding/nudges')} fullWidth />
       </View>
     </View>
   );
@@ -78,38 +82,54 @@ const styles = StyleSheet.create({
     padding: 24,
     justifyContent: 'space-between',
   },
-  content: { flex: 1, paddingTop: 24 },
-  stepLabel: { fontSize: 12, color: Colors.onSurfaceVariantLight, marginBottom: 8 },
-  title: { fontSize: 26, fontWeight: '700', color: Colors.primary900, marginBottom: 12 },
+  content: { flex: 1, paddingTop: 8 },
+  stepLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.primary900,
+    letterSpacing: 1.2,
+    marginBottom: 12,
+  },
+  title: { fontSize: 26, fontWeight: '800', color: Colors.primary900, marginBottom: 12 },
   description: {
-    fontSize: 15,
+    fontSize: 14,
     color: Colors.onSurfaceVariantLight,
-    lineHeight: 24,
+    lineHeight: 22,
     marginBottom: 20,
   },
   levels: { gap: 10, marginBottom: 20 },
+  levelWrapper: { position: 'relative' },
+  levelShadow: {
+    position: 'absolute',
+    top: DEPTH,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 2,
+  },
   levelCard: {
-    borderRadius: 10,
-    padding: 14,
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
+    backgroundColor: Colors.surfaceLight,
+    borderWidth: 2,
+    borderRadius: 2,
+    padding: 12,
   },
   badge: {
-    borderRadius: 4,
+    borderRadius: 2,
     paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingVertical: 4,
     alignSelf: 'flex-start',
-    minWidth: 70,
+    minWidth: 68,
     alignItems: 'center',
   },
-  badgeText: { fontSize: 11, fontWeight: '700', color: Colors.white, letterSpacing: 0.5 },
-  levelDesc: { flex: 1, fontSize: 13, color: Colors.onSurfaceLight, lineHeight: 20 },
+  badgeText: { fontSize: 11, fontWeight: '800', color: Colors.white, letterSpacing: 0.5 },
+  levelDesc: { flex: 1, fontSize: 12, color: Colors.onSurfaceLight, lineHeight: 18 },
   learnNote: {
-    fontSize: 13,
+    fontSize: 12,
     color: Colors.onSurfaceVariantLight,
-    fontStyle: 'italic',
-    lineHeight: 20,
+    lineHeight: 18,
   },
   footer: {},
 });

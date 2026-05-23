@@ -18,14 +18,19 @@ export function EmptyState({
 }: EmptyStateProps): React.JSX.Element {
   return (
     <View style={styles.container}>
-      <View style={styles.iconContainer}>
-        <View style={styles.iconDot} />
+      <View style={styles.card}>
+        <View style={styles.dot} />
+        <Text style={styles.title}>{title}</Text>
+        <Text style={styles.description}>{description}</Text>
+        {actionLabel && onAction && (
+          <Button
+            label={actionLabel}
+            onPress={onAction}
+            variant="secondary"
+            style={styles.button}
+          />
+        )}
       </View>
-      <Text style={styles.title}>{title}</Text>
-      <Text style={styles.description}>{description}</Text>
-      {actionLabel && onAction && (
-        <Button label={actionLabel} onPress={onAction} variant="secondary" style={styles.button} />
-      )}
     </View>
   );
 }
@@ -37,37 +42,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 32,
   },
-  iconContainer: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: Colors.primary100,
-    justifyContent: 'center',
+  card: {
+    width: '100%',
+    padding: 28,
+    backgroundColor: Colors.surfaceLight,
+    borderWidth: 2,
+    borderColor: Colors.outlineLight,
+    borderRadius: 2,
     alignItems: 'center',
+  },
+  dot: {
+    width: 32,
+    height: 32,
+    borderRadius: 2,
+    backgroundColor: Colors.primary100,
+    borderWidth: 2,
+    borderColor: Colors.primary300,
     marginBottom: 16,
   },
-  iconDot: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: Colors.primary500,
-  },
   title: {
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: '800',
     color: Colors.onSurfaceLight,
     textAlign: 'center',
     marginBottom: 8,
+    letterSpacing: 0.2,
   },
   description: {
-    fontSize: 14,
+    fontSize: 13,
     color: Colors.onSurfaceVariantLight,
     textAlign: 'center',
     maxWidth: 280,
     lineHeight: 20,
-    marginBottom: 24,
+    marginBottom: 8,
   },
   button: {
-    marginTop: 8,
+    marginTop: 16,
   },
 });

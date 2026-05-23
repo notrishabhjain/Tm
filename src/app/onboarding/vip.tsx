@@ -8,6 +8,8 @@ import { ContactPickerModal } from '@/ui/components/ContactPickerModal';
 import { db, initializeDatabase } from '@/data/db/client';
 import { VipContactRepository } from '@/data/repositories/VipContactRepository';
 
+const DEPTH = 4;
+
 export default function OnboardingVipScreen(): React.JSX.Element {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -36,52 +38,67 @@ export default function OnboardingVipScreen(): React.JSX.Element {
   return (
     <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <Text style={styles.stepLabel}>Step 3 of 4</Text>
+        <Text style={styles.stepLabel}>STEP 3 OF 4</Text>
         <Text style={styles.title}>VIP Contacts</Text>
         <Text style={styles.description}>
           Messages from VIP contacts always create URGENT tasks and skip the confirmation queue. Add
           names as they appear in your notifications.
         </Text>
 
-        <View style={styles.inputRow}>
-          <TextInput
-            style={styles.input}
-            value={name}
-            onChangeText={setName}
-            placeholder="e.g. Ravi Sharma"
-            placeholderTextColor={Colors.onSurfaceVariantLight}
-            onSubmitEditing={addVip}
-            returnKeyType="done"
-          />
-          <Pressable style={styles.addButton} onPress={addVip}>
-            <Text style={styles.addButtonText}>Add</Text>
-          </Pressable>
-        </View>
-
-        <Pressable style={styles.contactPickerBtn} onPress={() => setPickerVisible(true)}>
-          <Text style={styles.contactPickerText}>Pick from Contacts</Text>
-        </Pressable>
-
-        {vips.map((v) => (
-          <View key={v} style={styles.vipRow}>
-            <View style={styles.urgentDot} />
-            <Text style={styles.vipName}>{v}</Text>
-            <Pressable onPress={() => removeVip(v)} hitSlop={8}>
-              <Text style={styles.removeBtn}>Remove</Text>
+        <View style={[styles.inputWrapper, { paddingRight: DEPTH, paddingBottom: DEPTH }]}>
+          <View style={styles.inputShadow} />
+          <View style={styles.inputRow}>
+            <TextInput
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
+              placeholder="e.g. Ravi Sharma"
+              placeholderTextColor={Colors.onSurfaceVariantLight}
+              onSubmitEditing={addVip}
+              returnKeyType="done"
+            />
+            <Pressable style={styles.addButton} onPress={addVip}>
+              <Text style={styles.addButtonText}>Add</Text>
             </Pressable>
           </View>
-        ))}
+        </View>
 
-        {vips.length === 0 && (
+        <Pressable
+          style={({ pressed }) => [styles.pickerBtn, pressed && styles.pickerBtnPressed]}
+          onPress={() => setPickerVisible(true)}
+          accessibilityRole="button"
+        >
+          <Text style={styles.pickerBtnText}>Pick from Contacts</Text>
+        </Pressable>
+
+        {vips.length === 0 ? (
           <Text style={styles.emptyHint}>
             No VIP contacts yet. You can skip this and add them later in Settings.
           </Text>
+        ) : (
+          <>
+            <Text style={styles.sectionLabel}>ADDED ({vips.length})</Text>
+            <View style={[styles.vipListWrapper, { paddingRight: DEPTH, paddingBottom: DEPTH }]}>
+              <View style={[styles.vipListShadow, { backgroundColor: Colors.neoShadowUrgent }]} />
+              <View style={[styles.vipList, { borderColor: Colors.urgentFg }]}>
+                {vips.map((v, i) => (
+                  <View key={v} style={[styles.vipRow, i < vips.length - 1 && styles.vipRowBorder]}>
+                    <View style={styles.urgentDot} />
+                    <Text style={styles.vipName}>{v}</Text>
+                    <Pressable onPress={() => removeVip(v)} hitSlop={8}>
+                      <Text style={styles.removeBtn}>Remove</Text>
+                    </Pressable>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </>
         )}
       </ScrollView>
 
       <View style={styles.footer}>
         <Button
-          label="Continue →"
+          label="Continue"
           onPress={() =>
             void (async () => {
               if (vips.length > 0) {
@@ -118,59 +135,92 @@ export default function OnboardingVipScreen(): React.JSX.Element {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.backgroundLight },
-  content: { padding: 24 },
-  stepLabel: { fontSize: 12, color: Colors.onSurfaceVariantLight, marginBottom: 8 },
-  title: { fontSize: 26, fontWeight: '700', color: Colors.primary900, marginBottom: 12 },
-  description: {
-    fontSize: 15,
-    color: Colors.onSurfaceVariantLight,
-    lineHeight: 24,
-    marginBottom: 24,
+  content: { padding: 24, gap: 12 },
+  stepLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.primary900,
+    letterSpacing: 1.2,
   },
-  inputRow: { flexDirection: 'row', gap: 8, marginBottom: 10 },
+  title: { fontSize: 26, fontWeight: '800', color: Colors.primary900 },
+  description: { fontSize: 14, color: Colors.onSurfaceVariantLight, lineHeight: 22 },
+  inputWrapper: { position: 'relative' },
+  inputShadow: {
+    position: 'absolute',
+    top: DEPTH,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: Colors.neoShadowDefault,
+    borderRadius: 2,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    backgroundColor: Colors.surfaceLight,
+    borderWidth: 2,
+    borderColor: Colors.primary900,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
   input: {
     flex: 1,
     height: 48,
-    backgroundColor: Colors.surfaceLight,
-    borderRadius: 8,
     paddingHorizontal: 14,
     fontSize: 15,
     color: Colors.onSurfaceLight,
-    borderWidth: 1,
-    borderColor: Colors.outlineLight,
   },
   addButton: {
     height: 48,
     paddingHorizontal: 20,
-    backgroundColor: Colors.primary500,
-    borderRadius: 8,
+    backgroundColor: Colors.primary900,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  addButtonText: { color: Colors.white, fontWeight: '600', fontSize: 14 },
-  contactPickerBtn: {
-    height: 44,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: Colors.primary500,
+  addButtonText: { color: Colors.white, fontWeight: '700', fontSize: 14 },
+  pickerBtn: {
+    height: 48,
+    borderWidth: 2,
+    borderColor: Colors.primary900,
+    borderRadius: 2,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 20,
   },
-  contactPickerText: { fontSize: 14, color: Colors.primary500, fontWeight: '600' },
-  vipRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  pickerBtnPressed: { backgroundColor: Colors.primary50 },
+  pickerBtnText: { fontSize: 14, color: Colors.primary900, fontWeight: '700' },
+  emptyHint: { fontSize: 13, color: Colors.onSurfaceVariantLight, lineHeight: 20 },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.primary900,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+  },
+  vipListWrapper: { position: 'relative' },
+  vipListShadow: {
+    position: 'absolute',
+    top: DEPTH,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 2,
+  },
+  vipList: {
     backgroundColor: Colors.surfaceLight,
-    padding: 14,
-    borderRadius: 8,
-    marginBottom: 8,
-    gap: 10,
-    elevation: 1,
+    borderWidth: 2,
+    borderRadius: 2,
+    overflow: 'hidden',
   },
-  urgentDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.urgentFg },
-  vipName: { flex: 1, fontSize: 15, color: Colors.onSurfaceLight, fontWeight: '500' },
-  removeBtn: { fontSize: 13, color: Colors.error, fontWeight: '600' },
-  emptyHint: { fontSize: 13, color: Colors.onSurfaceVariantLight, fontStyle: 'italic' },
+  vipRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 10 },
+  vipRowBorder: { borderBottomWidth: 1, borderBottomColor: Colors.outlineLight },
+  urgentDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 2,
+    backgroundColor: Colors.urgentFg,
+    borderWidth: 1.5,
+    borderColor: Colors.neoShadowUrgent,
+  },
+  vipName: { flex: 1, fontSize: 14, color: Colors.onSurfaceLight, fontWeight: '600' },
+  removeBtn: { fontSize: 13, color: Colors.urgentFg, fontWeight: '700' },
   footer: { padding: 24, gap: 12 },
 });

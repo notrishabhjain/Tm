@@ -1,105 +1,96 @@
 import React, { useMemo } from 'react';
-import { View, Text, ScrollView, StyleSheet, Pressable, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { desc, eq, gt, and, sql } from 'drizzle-orm';
+import { gt, sql, eq } from 'drizzle-orm';
 import { Colors } from '@/ui/theme/colors';
 import { db } from '@/data/db/client';
-import { llmMetrics, trainingLog } from '@/data/db/schema';
+import { trainingLog, discardedLog, tasks, senderStats, learnedKeywords } from '@/data/db/schema';
 
 const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
+const DEPTH = 4;
 
-// ── Data fetchers ─────────────────────────────────────────────────────────────
-
-async function fetchSummary() {
+async function fetchDecisionStats() {
   const cutoff = Date.now() - SEVEN_DAYS;
-  const rows = await db
+  const [taskRow] = await db
     .select({
-      total: sql<number>`count(*)`,
-      avgDuration: sql<number>`round(avg(duration_ms))`,
-      createCount: sql<number>`sum(case when decision='CREATE' then 1 else 0 end)`,
-      confirmCount: sql<number>`sum(case when decision='CONFIRM' then 1 else 0 end)`,
-      discardCount: sql<number>`sum(case when decision='DISCARD' then 1 else 0 end)`,
+      created: sql<number>`count(*)`,
+      needsConfirm: sql<number>`sum(case when needs_confirmation=1 then 1 else 0 end)`,
     })
-    .from(llmMetrics)
-    .where(and(eq(llmMetrics.eventType, 'inference'), gt(llmMetrics.createdAt, cutoff)));
-  return rows[0] ?? { total: 0, avgDuration: 0, createCount: 0, confirmCount: 0, discardCount: 0 };
+    .from(tasks)
+    .where(gt(tasks.createdAt, cutoff));
+  const [discardRow] = await db
+    .select({ discarded: sql<number>`count(*)` })
+    .from(discardedLog)
+    .where(gt(discardedLog.createdAt, cutoff));
+  return {
+    created: taskRow?.created ?? 0,
+    needsConfirm: taskRow?.needsConfirm ?? 0,
+    discarded: discardRow?.discarded ?? 0,
+  };
 }
 
 async function fetchUserFeedback() {
   const cutoff = Date.now() - SEVEN_DAYS;
-  const rows = await db
+  const [row] = await db
     .select({
       confirmed: sql<number>`sum(case when action='CONFIRMED' then 1 else 0 end)`,
       rejected: sql<number>`sum(case when action='REJECTED' then 1 else 0 end)`,
+      completed: sql<number>`sum(case when action='COMPLETED' then 1 else 0 end)`,
     })
     .from(trainingLog)
     .where(gt(trainingLog.createdAt, cutoff));
-  return rows[0] ?? { confirmed: 0, rejected: 0 };
+  return {
+    confirmed: row?.confirmed ?? 0,
+    rejected: row?.rejected ?? 0,
+    completed: row?.completed ?? 0,
+  };
 }
 
-async function fetchLoadHistory() {
+async function fetchTierBreakdown() {
   return db
     .select({
-      id: llmMetrics.id,
-      modelId: llmMetrics.modelId,
-      durationMs: llmMetrics.durationMs,
-      createdAt: llmMetrics.createdAt,
+      tier: senderStats.tier,
+      count: sql<number>`count(*)`,
     })
-    .from(llmMetrics)
-    .where(eq(llmMetrics.eventType, 'load'))
-    .orderBy(desc(llmMetrics.createdAt))
-    .limit(10);
+    .from(senderStats)
+    .groupBy(senderStats.tier);
 }
 
-async function fetchRecentInferences() {
+async function fetchVocabSize() {
+  const [row] = await db
+    .select({ active: sql<number>`count(*)` })
+    .from(learnedKeywords)
+    .where(eq(learnedKeywords.status, 'ACTIVE'));
+  return row?.active ?? 0;
+}
+
+async function fetchDiscardReasons() {
+  const cutoff = Date.now() - SEVEN_DAYS;
   return db
     .select({
-      id: llmMetrics.id,
-      modelId: llmMetrics.modelId,
-      durationMs: llmMetrics.durationMs,
-      decision: llmMetrics.decision,
-      confidence: llmMetrics.confidence,
-      inputLength: llmMetrics.inputLength,
-      createdAt: llmMetrics.createdAt,
+      reason: discardedLog.reason,
+      count: sql<number>`count(*)`,
     })
-    .from(llmMetrics)
-    .where(eq(llmMetrics.eventType, 'inference'))
-    .orderBy(desc(llmMetrics.createdAt))
-    .limit(30);
+    .from(discardedLog)
+    .where(gt(discardedLog.createdAt, cutoff))
+    .groupBy(discardedLog.reason);
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function relativeTime(ts: number): string {
-  const diff = Date.now() - ts;
-  if (diff < 60_000) return `${Math.round(diff / 1000)}s ago`;
-  if (diff < 3_600_000) return `${Math.round(diff / 60_000)}m ago`;
-  if (diff < 86_400_000) return `${Math.round(diff / 3_600_000)}h ago`;
-  return `${Math.round(diff / 86_400_000)}d ago`;
-}
-
-function modelLabel(id: string): string {
-  if (id === 'qwen3-0.6b') return '0.6B';
-  if (id === 'qwen3-1.7b') return '1.7B';
-  return id;
-}
-
-function decisionColor(decision: string | null | undefined): string {
-  if (decision === 'CREATE') return Colors.success;
-  if (decision === 'CONFIRM') return Colors.warning;
-  if (decision === 'DISCARD') return Colors.onSurfaceVariantLight;
-  return Colors.onSurfaceVariantLight;
-}
-
-// ── Screen ────────────────────────────────────────────────────────────────────
+const TIER_LABELS: Record<string, string> = {
+  VIP_WORK: 'VIP Work',
+  VIP_PERSONAL: 'VIP Personal',
+  WORK: 'Work',
+  INFO: 'Info',
+  UNKNOWN: 'Unknown',
+};
 
 export default function AnalyticsScreen(): React.JSX.Element {
   const router = useRouter();
 
-  const { data: summary, isLoading: loadingSummary } = useQuery({
-    queryKey: ['analytics-summary'],
-    queryFn: fetchSummary,
+  const { data: decisions } = useQuery({
+    queryKey: ['analytics-decisions'],
+    queryFn: fetchDecisionStats,
     refetchInterval: 30_000,
   });
 
@@ -109,160 +100,146 @@ export default function AnalyticsScreen(): React.JSX.Element {
     refetchInterval: 30_000,
   });
 
-  const { data: loadHistory = [] } = useQuery({
-    queryKey: ['analytics-loads'],
-    queryFn: fetchLoadHistory,
+  const { data: tiers = [] } = useQuery({
+    queryKey: ['analytics-tiers'],
+    queryFn: fetchTierBreakdown,
     refetchInterval: 60_000,
   });
 
-  const { data: recentInferences = [] } = useQuery({
-    queryKey: ['analytics-inferences'],
-    queryFn: fetchRecentInferences,
-    refetchInterval: 15_000,
+  const { data: vocabSize = 0 } = useQuery({
+    queryKey: ['analytics-vocab'],
+    queryFn: fetchVocabSize,
+    refetchInterval: 60_000,
   });
 
-  const precisionPct = useMemo(() => {
+  const { data: discardReasons = [] } = useQuery({
+    queryKey: ['analytics-discard-reasons'],
+    queryFn: fetchDiscardReasons,
+    refetchInterval: 60_000,
+  });
+
+  const total = (decisions?.created ?? 0) + (decisions?.discarded ?? 0);
+  const autoCreated = (decisions?.created ?? 0) - (decisions?.needsConfirm ?? 0);
+  const autoCreatePct = total > 0 ? Math.round((autoCreated / total) * 100) : 0;
+  const confirmPct = total > 0 ? Math.round(((decisions?.needsConfirm ?? 0) / total) * 100) : 0;
+  const discardPct = total > 0 ? Math.round(((decisions?.discarded ?? 0) / total) * 100) : 0;
+
+  const precision = useMemo(() => {
     const conf = feedback?.confirmed ?? 0;
     const rej = feedback?.rejected ?? 0;
-    const total = conf + rej;
-    if (total === 0) return null;
-    return Math.round((conf / total) * 100);
+    const tot = conf + rej;
+    return tot === 0 ? null : Math.round((conf / tot) * 100);
   }, [feedback]);
-
-  const total = summary?.total ?? 0;
-  const createPct = total > 0 ? Math.round(((summary?.createCount ?? 0) / total) * 100) : 0;
-  const confirmPct = total > 0 ? Math.round(((summary?.confirmCount ?? 0) / total) * 100) : 0;
-  const discardPct = total > 0 ? Math.round(((summary?.discardCount ?? 0) / total) * 100) : 0;
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backText}>‹ Settings</Text>
+        <Pressable onPress={() => router.back()} style={styles.backBtn}>
+          <Text style={styles.backText}>Back</Text>
         </Pressable>
-        <Text style={styles.title}>AI Analytics</Text>
-        <View style={{ width: 70 }} />
+        <Text style={styles.title}>Analytics</Text>
+        <View style={{ width: 56 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        {/* ── Summary cards ── */}
+        {/* ── 7-day summary ── */}
         <Text style={styles.sectionLabel}>LAST 7 DAYS</Text>
-        {loadingSummary ? (
-          <ActivityIndicator color={Colors.primary500} style={{ marginVertical: 16 }} />
-        ) : (
-          <View style={styles.summaryRow}>
-            <StatCard label="Inferences" value={String(total)} />
-            <StatCard
-              label="Avg time"
-              value={summary?.avgDuration ? `${String(summary.avgDuration)}ms` : '—'}
-            />
-            <StatCard label="Auto-create" value={total > 0 ? `${createPct}%` : '—'} />
-            <StatCard
-              label="Precision"
-              value={precisionPct !== null ? `${precisionPct}%` : '—'}
-              hint="confirm inbox"
-            />
-          </View>
-        )}
+        <View style={styles.statsGrid}>
+          <NeoStatCard label="PROCESSED" value={String(total)} />
+          <NeoStatCard label="AUTO-CREATED" value={total > 0 ? `${autoCreatePct}%` : '—'} />
+          <NeoStatCard label="DISCARDED" value={total > 0 ? `${discardPct}%` : '—'} />
+          <NeoStatCard
+            label="PRECISION"
+            value={precision !== null ? `${precision}%` : '—'}
+            hint="confirm inbox"
+          />
+        </View>
 
         {/* ── Decision breakdown ── */}
         {total > 0 && (
           <>
             <Text style={[styles.sectionLabel, { marginTop: 20 }]}>DECISION BREAKDOWN</Text>
-            <View style={styles.card}>
-              <BreakdownBar label="AUTO-CREATE" pct={createPct} color={Colors.success} />
-              <BreakdownBar label="CONFIRM" pct={confirmPct} color={Colors.warning} />
+            <NeoCard>
+              <BreakdownBar label="AUTO-CREATE" pct={autoCreatePct} color={Colors.success} />
+              <BreakdownBar label="CONFIRM" pct={confirmPct} color={Colors.highFg} />
               <BreakdownBar label="DISCARD" pct={discardPct} color={Colors.onSurfaceVariantLight} />
-              {(feedback?.confirmed ?? 0) + (feedback?.rejected ?? 0) > 0 && (
-                <View style={styles.feedbackRow}>
-                  <Text style={styles.feedbackText}>
-                    Confirm inbox decisions — confirmed: {feedback?.confirmed ?? 0} · rejected:{' '}
-                    {feedback?.rejected ?? 0}
-                  </Text>
-                </View>
-              )}
-            </View>
+            </NeoCard>
           </>
         )}
 
-        {/* ── Load history ── */}
-        {loadHistory.length > 0 && (
+        {/* ── User feedback ── */}
+        {(feedback?.confirmed ?? 0) + (feedback?.rejected ?? 0) > 0 && (
           <>
-            <Text style={[styles.sectionLabel, { marginTop: 20 }]}>LOAD HISTORY</Text>
-            <View style={styles.card}>
-              {(
-                loadHistory as Array<{
-                  id: number;
-                  modelId: string;
-                  durationMs: number;
-                  createdAt: number;
-                }>
-              ).map((row, i) => (
-                <View key={row.id} style={[styles.logRow, i > 0 && styles.logRowBorder]}>
-                  <View style={styles.logModelBadge}>
-                    <Text style={styles.logModelText}>{modelLabel(row.modelId)}</Text>
-                  </View>
-                  <Text style={styles.logDuration}>{row.durationMs}ms</Text>
-                  <Text style={styles.logTime}>{relativeTime(row.createdAt)}</Text>
-                </View>
-              ))}
-            </View>
+            <Text style={[styles.sectionLabel, { marginTop: 20 }]}>USER FEEDBACK</Text>
+            <NeoCard>
+              <FeedbackRow
+                label="Confirmed"
+                value={feedback?.confirmed ?? 0}
+                color={Colors.success}
+              />
+              <FeedbackRow
+                label="Rejected"
+                value={feedback?.rejected ?? 0}
+                color={Colors.urgentFg}
+              />
+              <FeedbackRow
+                label="Completed"
+                value={feedback?.completed ?? 0}
+                color={Colors.primary500}
+              />
+            </NeoCard>
           </>
         )}
 
-        {/* ── Recent inferences ── */}
-        {recentInferences.length > 0 && (
+        {/* ── Discard reasons ── */}
+        {discardReasons.length > 0 && (
           <>
-            <Text style={[styles.sectionLabel, { marginTop: 20 }]}>
-              RECENT INFERENCES ({recentInferences.length})
-            </Text>
-            <View style={styles.card}>
-              {(
-                recentInferences as Array<{
-                  id: number;
-                  modelId: string;
-                  durationMs: number;
-                  decision: string | null;
-                  confidence: number | null;
-                  inputLength: number | null;
-                  createdAt: number;
-                }>
-              ).map((row, i) => (
-                <View key={row.id} style={[styles.inferenceRow, i > 0 && styles.logRowBorder]}>
-                  <View style={styles.inferenceLeft}>
-                    <View style={styles.logModelBadge}>
-                      <Text style={styles.logModelText}>{modelLabel(row.modelId)}</Text>
-                    </View>
-                    <Text style={styles.logDuration}>{row.durationMs}ms</Text>
-                    <View
-                      style={[
-                        styles.decisionBadge,
-                        { backgroundColor: decisionColor(row.decision) + '22' },
-                      ]}
-                    >
-                      <Text style={[styles.decisionText, { color: decisionColor(row.decision) }]}>
-                        {row.decision ?? '—'}
-                      </Text>
-                    </View>
-                  </View>
-                  <View style={styles.inferenceRight}>
-                    {row.confidence !== null && row.confidence !== undefined && (
-                      <Text style={styles.confidenceText}>{Math.round(row.confidence * 100)}%</Text>
-                    )}
-                    <Text style={styles.logTime}>{relativeTime(row.createdAt)}</Text>
-                  </View>
-                </View>
+            <Text style={[styles.sectionLabel, { marginTop: 20 }]}>DISCARD REASONS</Text>
+            <NeoCard>
+              {discardReasons.map((r: { reason: string; count: number }, i: number) => (
+                <FeedbackRow
+                  key={r.reason}
+                  label={r.reason.replace(/_/g, ' ')}
+                  value={r.count}
+                  color={Colors.onSurfaceVariantLight}
+                  border={i > 0}
+                />
               ))}
-            </View>
+            </NeoCard>
           </>
         )}
 
-        {total === 0 && !loadingSummary && (
+        {/* ── Sender trust tiers ── */}
+        {tiers.length > 0 && (
+          <>
+            <Text style={[styles.sectionLabel, { marginTop: 20 }]}>SENDER TRUST TIERS</Text>
+            <NeoCard>
+              {tiers.map((t: { tier: string; count: number }, i: number) => (
+                <FeedbackRow
+                  key={t.tier}
+                  label={TIER_LABELS[t.tier] ?? t.tier}
+                  value={t.count}
+                  color={Colors.primary500}
+                  border={i > 0}
+                />
+              ))}
+            </NeoCard>
+          </>
+        )}
+
+        {/* ── Vocabulary ── */}
+        <Text style={[styles.sectionLabel, { marginTop: 20 }]}>LEARNED VOCABULARY</Text>
+        <NeoCard>
+          <FeedbackRow label="Active n-grams" value={vocabSize} color={Colors.success} />
+        </NeoCard>
+
+        {/* Empty state */}
+        {total === 0 && (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>No inferences yet</Text>
+            <Text style={styles.emptyTitle}>No data yet</Text>
             <Text style={styles.emptyDesc}>
-              Download and load the Qwen3-0.6B classifier from Settings → AI Models. Once loaded,
-              metrics appear here as notifications are classified.
+              Decision metrics will appear here once the notification listener captures and
+              processes notifications.
             </Text>
           </View>
         )}
@@ -271,9 +248,16 @@ export default function AnalyticsScreen(): React.JSX.Element {
   );
 }
 
-// ── Sub-components ────────────────────────────────────────────────────────────
+function NeoCard({ children }: { children: React.ReactNode }): React.JSX.Element {
+  return (
+    <View style={[styles.neoCardWrapper, { paddingRight: DEPTH, paddingBottom: DEPTH }]}>
+      <View style={styles.neoCardShadow} />
+      <View style={styles.neoCard}>{children}</View>
+    </View>
+  );
+}
 
-function StatCard({
+function NeoStatCard({
   label,
   value,
   hint,
@@ -283,10 +267,13 @@ function StatCard({
   hint?: string;
 }): React.JSX.Element {
   return (
-    <View style={styles.statCard}>
-      <Text style={styles.statValue}>{value}</Text>
-      <Text style={styles.statLabel}>{label}</Text>
-      {hint && <Text style={styles.statHint}>{hint}</Text>}
+    <View style={[styles.statWrapper, { paddingRight: DEPTH, paddingBottom: DEPTH }]}>
+      <View style={styles.statShadow} />
+      <View style={styles.statCard}>
+        <Text style={styles.statValue}>{value}</Text>
+        <Text style={styles.statLabel}>{label}</Text>
+        {hint && <Text style={styles.statHint}>{hint}</Text>}
+      </View>
     </View>
   );
 }
@@ -304,14 +291,33 @@ function BreakdownBar({
     <View style={styles.breakdownRow}>
       <Text style={styles.breakdownLabel}>{label}</Text>
       <View style={styles.breakdownTrack}>
-        <View style={[styles.breakdownFill, { width: `${pct}%`, backgroundColor: color }]} />
+        <View
+          style={[styles.breakdownFill, { width: `${Math.max(pct, 0)}%`, backgroundColor: color }]}
+        />
       </View>
       <Text style={[styles.breakdownPct, { color }]}>{pct}%</Text>
     </View>
   );
 }
 
-// ── Styles ────────────────────────────────────────────────────────────────────
+function FeedbackRow({
+  label,
+  value,
+  color,
+  border = false,
+}: {
+  label: string;
+  value: number;
+  color: string;
+  border?: boolean;
+}): React.JSX.Element {
+  return (
+    <View style={[styles.feedbackRow, border && styles.feedbackRowBorder]}>
+      <Text style={styles.feedbackLabel}>{label}</Text>
+      <Text style={[styles.feedbackValue, { color }]}>{value}</Text>
+    </View>
+  );
+}
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.backgroundLight },
@@ -319,101 +325,112 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    backgroundColor: Colors.surfaceLight,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.outlineLight,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: Colors.primary900,
+    borderBottomWidth: 2,
+    borderBottomColor: Colors.black,
   },
-  backButton: { padding: 4 },
-  backText: { fontSize: 16, color: Colors.primary500, fontWeight: '600' },
-  title: { fontSize: 17, fontWeight: '700', color: Colors.onSurfaceLight },
-  content: { padding: 16, paddingBottom: 40, gap: 8 },
+  backBtn: { padding: 4, minWidth: 56 },
+  backText: { fontSize: 15, color: Colors.white, fontWeight: '600' },
+  title: { fontSize: 17, fontWeight: '800', color: Colors.white, letterSpacing: 0.3 },
+  content: { padding: 16, paddingBottom: 40 },
   sectionLabel: {
     fontSize: 11,
-    fontWeight: '600',
-    color: Colors.onSurfaceVariantLight,
-    letterSpacing: 0.8,
-    marginBottom: 4,
+    fontWeight: '800',
+    color: Colors.primary900,
+    letterSpacing: 1.2,
+    marginBottom: 8,
+    textTransform: 'uppercase',
   },
-  summaryRow: { flexDirection: 'row', gap: 8 },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  statWrapper: { width: '47%', position: 'relative' },
+  statShadow: {
+    position: 'absolute',
+    top: DEPTH,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: Colors.neoShadowDefault,
+    borderRadius: 2,
+  },
   statCard: {
-    flex: 1,
     backgroundColor: Colors.surfaceLight,
-    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: Colors.primary900,
+    borderRadius: 2,
     padding: 12,
     alignItems: 'center',
-    elevation: 1,
   },
-  statValue: { fontSize: 20, fontWeight: '700', color: Colors.onSurfaceLight },
+  statValue: { fontSize: 22, fontWeight: '800', color: Colors.onSurfaceLight },
   statLabel: {
-    fontSize: 10,
+    fontSize: 9,
     color: Colors.onSurfaceVariantLight,
-    fontWeight: '500',
+    fontWeight: '700',
     marginTop: 2,
     textAlign: 'center',
+    letterSpacing: 0.6,
   },
   statHint: { fontSize: 9, color: Colors.onSurfaceVariantLight, marginTop: 1, textAlign: 'center' },
-  card: {
+  neoCardWrapper: { position: 'relative', marginBottom: 4 },
+  neoCardShadow: {
+    position: 'absolute',
+    top: DEPTH,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: Colors.neoShadowDefault,
+    borderRadius: 2,
+  },
+  neoCard: {
     backgroundColor: Colors.surfaceLight,
-    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: Colors.primary900,
+    borderRadius: 2,
     padding: 14,
-    elevation: 1,
     gap: 10,
   },
-  divider: { height: 1, backgroundColor: Colors.outlineLight },
-  modelStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  statusDot: { width: 8, height: 8, borderRadius: 4 },
-  modelStatusLabel: { fontSize: 13, color: Colors.onSurfaceLight, flex: 1 },
-  modelStatusRight: { fontSize: 12, color: Colors.onSurfaceVariantLight },
   breakdownRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   breakdownLabel: {
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: 10,
+    fontWeight: '700',
     color: Colors.onSurfaceVariantLight,
-    width: 90,
+    width: 88,
+    letterSpacing: 0.4,
   },
   breakdownTrack: {
     flex: 1,
-    height: 8,
+    height: 6,
     backgroundColor: Colors.outlineLight,
-    borderRadius: 4,
+    borderRadius: 1,
     overflow: 'hidden',
   },
-  breakdownFill: { height: '100%', borderRadius: 4 },
-  breakdownPct: { fontSize: 12, fontWeight: '600', width: 36, textAlign: 'right' },
+  breakdownFill: { height: '100%' },
+  breakdownPct: { fontSize: 12, fontWeight: '700', width: 36, textAlign: 'right' },
   feedbackRow: {
-    marginTop: 4,
-    paddingTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 4,
+  },
+  feedbackRowBorder: {
     borderTopWidth: 1,
     borderTopColor: Colors.outlineLight,
+    paddingTop: 8,
+    marginTop: 4,
   },
-  feedbackText: { fontSize: 12, color: Colors.onSurfaceVariantLight },
-  logRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  logRowBorder: { paddingTop: 8, borderTopWidth: 1, borderTopColor: Colors.outlineLight },
-  logModelBadge: {
-    backgroundColor: Colors.surfaceVariantLight,
-    borderRadius: 4,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-  },
-  logModelText: { fontSize: 11, fontWeight: '600', color: Colors.onSurfaceVariantLight },
-  logDuration: { fontSize: 12, color: Colors.onSurfaceLight, flex: 1 },
-  logTime: { fontSize: 11, color: Colors.onSurfaceVariantLight },
-  inferenceRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  inferenceLeft: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  inferenceRight: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  decisionBadge: { borderRadius: 4, paddingHorizontal: 6, paddingVertical: 2 },
-  decisionText: { fontSize: 10, fontWeight: '700' },
-  confidenceText: { fontSize: 12, color: Colors.onSurfaceVariantLight },
+  feedbackLabel: { fontSize: 13, color: Colors.onSurfaceLight, fontWeight: '500' },
+  feedbackValue: { fontSize: 16, fontWeight: '800' },
   emptyState: {
+    marginTop: 32,
+    padding: 24,
     backgroundColor: Colors.surfaceLight,
-    borderRadius: 10,
-    padding: 20,
+    borderWidth: 2,
+    borderColor: Colors.outlineLight,
+    borderRadius: 2,
     alignItems: 'center',
-    gap: 8,
-    marginTop: 16,
   },
-  emptyTitle: { fontSize: 15, fontWeight: '600', color: Colors.onSurfaceLight },
+  emptyTitle: { fontSize: 15, fontWeight: '700', color: Colors.onSurfaceLight, marginBottom: 8 },
   emptyDesc: {
     fontSize: 13,
     color: Colors.onSurfaceVariantLight,
