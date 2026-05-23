@@ -1,5 +1,6 @@
 package expo.modules.notificationlistener
 
+import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -110,7 +111,8 @@ class TaskMindNotificationListenerService : NotificationListenerService() {
         val category = sbn.notification.category ?: ""
         val channelId = sbn.notification.channelId ?: ""
         val importance = try {
-            getNotificationChannel(channelId)?.importance ?: 3
+            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            nm.getNotificationChannel(channelId)?.importance ?: 3
         } catch (_: Exception) {
             3
         }
