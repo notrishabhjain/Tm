@@ -274,3 +274,75 @@ describe('priority derivation', () => {
     expect(['URGENT', 'HIGH']).toContain(result.priority);
   });
 });
+
+describe('absolute deadline extraction', () => {
+  it('extracts time-of-day deadline (by 3pm)', async () => {
+    const result = await scoreNotification(notif({ bigText: 'please submit the report by 3pm' }));
+    expect(result.extractedDeadline).not.toBeNull();
+    const d = new Date(result.extractedDeadline!);
+    expect(d.getHours()).toBe(15);
+    expect(d.getMinutes()).toBe(0);
+  });
+
+  it('extracts 24-hour time deadline (by 15:30)', async () => {
+    const result = await scoreNotification(
+      notif({ bigText: 'please submit the doc before 15:30' })
+    );
+    expect(result.extractedDeadline).not.toBeNull();
+    const d = new Date(result.extractedDeadline!);
+    expect(d.getHours()).toBe(15);
+    expect(d.getMinutes()).toBe(30);
+  });
+
+  it('extracts ordinal day-of-month deadline (by 25th)', async () => {
+    const result = await scoreNotification(notif({ bigText: 'please submit the report by 25th' }));
+    expect(result.extractedDeadline).not.toBeNull();
+    const d = new Date(result.extractedDeadline!);
+    expect(d.getDate()).toBe(25);
+    expect(d.getHours()).toBe(23);
+  });
+
+  it('extracts month+day deadline in "by Jan 15" format', async () => {
+    const result = await scoreNotification(
+      notif({ bigText: 'please submit the proposal by Jan 15' })
+    );
+    expect(result.extractedDeadline).not.toBeNull();
+    const d = new Date(result.extractedDeadline!);
+    expect(d.getMonth()).toBe(0); // January = 0
+    expect(d.getDate()).toBe(15);
+  });
+
+  it('extracts month+day deadline in "by 5th March" format', async () => {
+    const result = await scoreNotification(
+      notif({ bigText: 'please send the invoice by 5th March' })
+    );
+    expect(result.extractedDeadline).not.toBeNull();
+    const d = new Date(result.extractedDeadline!);
+    expect(d.getMonth()).toBe(2); // March = 2
+    expect(d.getDate()).toBe(5);
+  });
+
+  it('extracts DD/MM date deadline', async () => {
+    const result = await scoreNotification(notif({ bigText: 'please send the report by 25/8' }));
+    expect(result.extractedDeadline).not.toBeNull();
+    const d = new Date(result.extractedDeadline!);
+    expect(d.getMonth()).toBe(7); // August = 7
+    expect(d.getDate()).toBe(25);
+  });
+
+  it('extracts Hindi date deadline (tarikh)', async () => {
+    const result = await scoreNotification(notif({ bigText: '25 tarikh tak report bhej do' }));
+    expect(result.extractedDeadline).not.toBeNull();
+    const d = new Date(result.extractedDeadline!);
+    expect(d.getDate()).toBe(25);
+  });
+
+  it('extracts end-of-week deadline for "this week"', async () => {
+    const result = await scoreNotification(
+      notif({ bigText: 'please review the document by this week' })
+    );
+    expect(result.extractedDeadline).not.toBeNull();
+    const d = new Date(result.extractedDeadline!);
+    expect(d.getDay()).toBe(5); // Friday
+  });
+});

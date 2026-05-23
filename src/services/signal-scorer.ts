@@ -149,56 +149,177 @@ async function hasRecentThreadTask(sender: string, sourceApp: string): Promise<b
 
 function extractDeadline(text: string): number | null {
   const lower = text.toLowerCase();
-  const now = Date.now();
+  const now = new Date();
+  const nowMs = now.getTime();
   const deadlines: number[] = [];
 
-  const endOfToday = (): number => {
-    const d = new Date();
-    d.setHours(23, 59, 59, 999);
-    return d.getTime();
+  const eod = (d: Date): number => {
+    const r = new Date(d);
+    r.setHours(23, 59, 59, 999);
+    return r.getTime();
   };
 
-  const nextWeekday = (name: string): number => {
-    const days: Record<string, number> = {
-      sunday: 0,
-      monday: 1,
-      tuesday: 2,
-      wednesday: 3,
-      thursday: 4,
-      friday: 5,
-      saturday: 6,
-    };
-    const target = days[name];
-    if (target === undefined) return 0;
-    const d = new Date();
+  const nextWeekday = (target: number): number => {
+    const d = new Date(now);
     const diff = (target - d.getDay() + 7) % 7 || 7;
     d.setDate(d.getDate() + diff);
-    d.setHours(23, 59, 59, 999);
-    return d.getTime();
+    return eod(d);
   };
 
-  if (/\btomorrow\b/.test(lower)) deadlines.push(now + 86_400_000);
-  if (/\b(today|tonight|eod|cob|end of day)\b/.test(lower)) deadlines.push(endOfToday());
-  if (/\basap\b/.test(lower)) deadlines.push(now + 3_600_000);
+  // ── Relative terms ────────────────────────────────────────────────────────
+  if (/\btomorrow\b/.test(lower)) {
+    const d = new Date(now);
+    d.setDate(d.getDate() + 1);
+    deadlines.push(eod(d));
+  }
+  if (/\b(today|tonight|eod|cob|end of day)\b/.test(lower)) deadlines.push(eod(now));
+  if (/\basap\b/.test(lower)) deadlines.push(nowMs + 3_600_000);
 
-  const hoursMatch = lower.match(/\bin (\d+) hours?\b/);
-  if (hoursMatch) deadlines.push(now + parseInt(hoursMatch[1], 10) * 3_600_000);
+  const hoursMatch = lower.match(/\bin (\d+)\s*hours?\b/);
+  if (hoursMatch) deadlines.push(nowMs + parseInt(hoursMatch[1], 10) * 3_600_000);
 
-  const daysMatch = lower.match(/\bin (\d+) days?\b/);
-  if (daysMatch) deadlines.push(now + parseInt(daysMatch[1], 10) * 86_400_000);
+  const daysMatch = lower.match(/\bin (\d+)\s*days?\b/);
+  if (daysMatch) deadlines.push(nowMs + parseInt(daysMatch[1], 10) * 86_400_000);
 
-  for (const day of [
-    'monday',
-    'tuesday',
-    'wednesday',
-    'thursday',
-    'friday',
-    'saturday',
-    'sunday',
-  ]) {
-    if (lower.includes(day)) {
-      const ts = nextWeekday(day);
-      if (ts > 0) deadlines.push(ts);
+  // ── Named weekdays ────────────────────────────────────────────────────────
+  const weekdays: Array<[string, number]> = [
+    ['sunday', 0],
+    ['monday', 1],
+    ['tuesday', 2],
+    ['wednesday', 3],
+    ['thursday', 4],
+    ['friday', 5],
+    ['saturday', 6],
+  ];
+  for (const [name, idx] of weekdays) {
+    if (lower.includes(name)) deadlines.push(nextWeekday(idx));
+  }
+
+  // ── This week / next week ─────────────────────────────────────────────────
+  if (/\bthis\s+week\b/.test(lower)) deadlines.push(nextWeekday(5));
+  if (/\bnext\s+week\b/.test(lower)) {
+    const d = new Date(now);
+    const toFri = (5 - d.getDay() + 7) % 7 || 7;
+    d.setDate(d.getDate() + toFri + 7);
+    deadlines.push(eod(d));
+  }
+
+  // ── Time of day: "by 3pm", "before 5:30 AM", "by 15:00" ──────────────────
+  const amPmMatch = lower.match(/\b(?:by|before|at)\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)\b/);
+  if (amPmMatch) {
+    let h = parseInt(amPmMatch[1], 10);
+    const m = amPmMatch[2] ? parseInt(amPmMatch[2], 10) : 0;
+    if (amPmMatch[3] === 'pm' && h < 12) h += 12;
+    if (amPmMatch[3] === 'am' && h === 12) h = 0;
+    const d = new Date(now);
+    d.setHours(h, m, 0, 0);
+    if (d.getTime() <= nowMs) d.setDate(d.getDate() + 1);
+    deadlines.push(d.getTime());
+  } else {
+    // 24-hour time with colon: "by 15:00", "before 18:30"
+    const h24 = lower.match(/\b(?:by|before|at)\s+([01]?\d|2[0-3]):([0-5]\d)\b/);
+    if (h24) {
+      const d = new Date(now);
+      d.setHours(parseInt(h24[1], 10), parseInt(h24[2], 10), 0, 0);
+      if (d.getTime() <= nowMs) d.setDate(d.getDate() + 1);
+      deadlines.push(d.getTime());
+    }
+  }
+
+  // ── Month-name patterns (checked before ordinal-only to avoid conflict) ───
+  const MONTHS =
+    'jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|' +
+    'aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?';
+  const toMonthIdx = (s: string): number => {
+    const key = s.slice(0, 3).toLowerCase();
+    const map: Record<string, number> = {
+      jan: 0,
+      feb: 1,
+      mar: 2,
+      apr: 3,
+      may: 4,
+      jun: 5,
+      jul: 6,
+      aug: 7,
+      sep: 8,
+      oct: 9,
+      nov: 10,
+      dec: 11,
+    };
+    return map[key] ?? -1;
+  };
+
+  let monthDayMatched = false;
+
+  // "by Jan 5" / "by January 5th"
+  const mdMatch = lower.match(
+    new RegExp(`\\b(?:by|before|on|till?)\\s+(${MONTHS})\\s+(\\d{1,2})(?:st|nd|rd|th)?\\b`)
+  );
+  if (mdMatch) {
+    monthDayMatched = true;
+    const mi = toMonthIdx(mdMatch[1]);
+    const day = parseInt(mdMatch[2], 10);
+    if (mi !== -1 && day >= 1 && day <= 31) {
+      let yr = now.getFullYear();
+      if (new Date(yr, mi, day).getTime() < nowMs) yr += 1;
+      deadlines.push(new Date(yr, mi, day, 23, 59, 59, 999).getTime());
+    }
+  }
+
+  // "by 5 Jan" / "by 5th January"
+  if (!monthDayMatched) {
+    const dmMatch = lower.match(
+      new RegExp(`\\b(?:by|before|on|till?)\\s+(\\d{1,2})(?:st|nd|rd|th)?\\s+(${MONTHS})\\b`)
+    );
+    if (dmMatch) {
+      monthDayMatched = true;
+      const day = parseInt(dmMatch[1], 10);
+      const mi = toMonthIdx(dmMatch[2]);
+      if (mi !== -1 && day >= 1 && day <= 31) {
+        let yr = now.getFullYear();
+        if (new Date(yr, mi, day).getTime() < nowMs) yr += 1;
+        deadlines.push(new Date(yr, mi, day, 23, 59, 59, 999).getTime());
+      }
+    }
+  }
+
+  // ── Absolute day-of-month with ordinal: "by 25th", "before the 3rd" ───────
+  if (!monthDayMatched) {
+    const domMatch = lower.match(
+      /\b(?:by|before|on|till?)\s+(?:the\s+)?(\d{1,2})(?:st|nd|rd|th)\b/
+    );
+    if (domMatch) {
+      const day = parseInt(domMatch[1], 10);
+      if (day >= 1 && day <= 31) {
+        const d = new Date(now.getFullYear(), now.getMonth(), day, 23, 59, 59, 999);
+        if (d.getTime() <= nowMs) d.setMonth(d.getMonth() + 1);
+        deadlines.push(d.getTime());
+      }
+    }
+  }
+
+  // ── DD/MM[/YYYY]: "by 25/6", "before 3/12/2025" ──────────────────────────
+  const slashMatch = lower.match(
+    /\b(?:by|before|on|till?)\s+(\d{1,2})\/(\d{1,2})(?:\/(\d{2,4}))?\b/
+  );
+  if (slashMatch) {
+    const day = parseInt(slashMatch[1], 10);
+    const month = parseInt(slashMatch[2], 10) - 1;
+    let yr = slashMatch[3] ? parseInt(slashMatch[3], 10) : now.getFullYear();
+    if (yr < 100) yr += 2000;
+    if (day >= 1 && day <= 31 && month >= 0 && month <= 11) {
+      deadlines.push(new Date(yr, month, day, 23, 59, 59, 999).getTime());
+    }
+  }
+
+  // ── Hindi absolute date: "25 tarikh tak", "25 tarik ko" ──────────────────
+  const hindiMatch = lower.match(/\b(\d{1,2})\s*(?:tarikh|tarik|taarik)\b/);
+  if (hindiMatch) {
+    const day = parseInt(hindiMatch[1], 10);
+    if (day >= 1 && day <= 31) {
+      const d = new Date(now.getFullYear(), now.getMonth(), day, 23, 59, 59, 999);
+      if (d.getTime() <= nowMs) d.setMonth(d.getMonth() + 1);
+      deadlines.push(d.getTime());
     }
   }
 
@@ -394,9 +515,15 @@ function evalPositiveSignals(
 
   // deadline_en
   if (
-    /\b(today|tonight|tomorrow|asap|eod|cob|end of day|by \d|monday|tuesday|wednesday|thursday|friday|in \d+ (hour|day)|this week|next week)\b/i.test(
+    /\b(today|tonight|tomorrow|asap|eod|cob|end of day|monday|tuesday|wednesday|thursday|friday|saturday|sunday|this week|next week)\b/i.test(
       latestMessage
-    )
+    ) ||
+    /\b(?:by|before|till?)\s+(?:the\s+)?\d{1,2}(?:st|nd|rd|th)\b/i.test(latestMessage) ||
+    /\b(?:by|before|at)\s+\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/i.test(latestMessage) ||
+    /\b(?:by|before|on)\s+(?:jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)/i.test(
+      latestMessage
+    ) ||
+    /\bin \d+ (?:hour|day)/i.test(latestMessage)
   ) {
     applySignal(acc, 'deadline_en', 0.35);
   }
