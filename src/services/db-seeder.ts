@@ -22,7 +22,7 @@ const SEED_SENDER_STATS = [
   {
     senderKey: 'com.whatsapp::rohit_gosain_pa',
     tier: 'VIP_WORK',
-    seedTrust: 0.90,
+    seedTrust: 0.9,
     confirmCount: 18,
     rejectCount: 2,
     autoAcceptCount: 5,

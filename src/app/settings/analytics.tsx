@@ -291,7 +291,6 @@ function StatCard({
   );
 }
 
-
 function BreakdownBar({
   label,
   pct,

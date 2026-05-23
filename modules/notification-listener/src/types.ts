@@ -16,7 +16,7 @@ export interface NotificationData {
   // MessagingStyle thread — last N messages from the conversation
   thread: ThreadMessage[];
   // Android metadata for app-context scoring
-  category: string;   // CATEGORY_MESSAGE, CATEGORY_EMAIL, etc.
+  category: string; // CATEGORY_MESSAGE, CATEGORY_EMAIL, etc.
   channelId: string;
   importance: number; // 0-5 (IMPORTANCE_NONE to IMPORTANCE_HIGH)
 }
@@ -30,7 +30,4 @@ export interface PersistentNotificationParams {
 
 export type PermissionStatus = 'granted' | 'denied' | 'unknown';
 
-export type NotificationEvent =
-  | 'onNotification'
-  | 'onQuickActionDoneTop'
-  | 'onQuickActionOpen';
+export type NotificationEvent = 'onNotification' | 'onQuickActionDoneTop' | 'onQuickActionOpen';

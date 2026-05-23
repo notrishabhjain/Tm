@@ -92,7 +92,7 @@ export const senderStats = sqliteTable(
     lastSeenAt: integer('last_seen_at').notNull(),
     // Signal engine additions
     tier: text('tier').notNull().default('UNKNOWN'), // VIP_WORK|WORK|VIP_PERSONAL|INFO|UNKNOWN
-    seedTrust: real('seed_trust'),                   // pre-seeded trust 0-1, null = use computed
+    seedTrust: real('seed_trust'), // pre-seeded trust 0-1, null = use computed
   },
   (table) => ({
     senderKeyIdx: uniqueIndex('idx_sender_stats_key').on(table.senderKey),

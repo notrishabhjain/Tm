@@ -1,9 +1,5 @@
 import { requireNativeModule, EventEmitter } from 'expo-modules-core';
-import type {
-  NotificationData,
-  PersistentNotificationParams,
-  PermissionStatus,
-} from './types';
+import type { NotificationData, PersistentNotificationParams, PermissionStatus } from './types';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let NativeModule: any = null;
@@ -113,7 +109,6 @@ const NotificationListenerModule = {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (emitter as any).addListener('onQuickActionOpen', listener) as { remove: () => void };
   },
-
 };
 
 export default NotificationListenerModule;

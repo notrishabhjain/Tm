@@ -10,17 +10,60 @@ const CANCEL_PATTERN_HI =
   /\b(cancel ho gaya|cancel kar do|nahi hoga|rehne do|chhoddo|mat aao|band kar do|hone wala nahi)\b/i;
 
 const STOP_WORDS = new Set([
-  'the', 'a', 'an', 'is', 'are', 'was', 'to', 'for',
-  'on', 'at', 'in', 'of', 'and', 'or', 'that',
+  'the',
+  'a',
+  'an',
+  'is',
+  'are',
+  'was',
+  'to',
+  'for',
+  'on',
+  'at',
+  'in',
+  'of',
+  'and',
+  'or',
+  'that',
 ]);
 
 // Cancel verbs to remove from target phrase
 const CANCEL_VERBS = new Set([
-  'cancelled', 'cancel', 'called', 'off', 'postponed', 'rescheduled', 'moved',
-  'meeting', 'won', 't', 'happen', 'not', 'happening', 'longer', 'required',
-  'disregard', 'ignore', 'previous', 'skip', 'today', 'needed', 'anymore',
-  'ho', 'gaya', 'kar', 'do', 'nahi', 'hoga', 'rehne', 'chhoddo', 'mat', 'aao',
-  'band', 'hone', 'wala',
+  'cancelled',
+  'cancel',
+  'called',
+  'off',
+  'postponed',
+  'rescheduled',
+  'moved',
+  'meeting',
+  'won',
+  't',
+  'happen',
+  'not',
+  'happening',
+  'longer',
+  'required',
+  'disregard',
+  'ignore',
+  'previous',
+  'skip',
+  'today',
+  'needed',
+  'anymore',
+  'ho',
+  'gaya',
+  'kar',
+  'do',
+  'nahi',
+  'hoga',
+  'rehne',
+  'chhoddo',
+  'mat',
+  'aao',
+  'band',
+  'hone',
+  'wala',
 ]);
 
 function isCancellation(text: string): boolean {
@@ -49,8 +92,12 @@ function countSignificantOverlap(titleTokens: string[], targetTokens: string[]):
 }
 
 export async function resolveCancellation(notification: NotificationData): Promise<boolean> {
-  const latestMessage =
-    (notification.bigText || notification.text || notification.title || '').trim();
+  const latestMessage = (
+    notification.bigText ||
+    notification.text ||
+    notification.title ||
+    ''
+  ).trim();
 
   if (!isCancellation(latestMessage)) return false;
 

@@ -57,7 +57,12 @@ async function loadSenderInfo(senderKey: string): Promise<SenderInfo> {
     const rawTier = row.tier as Tier;
     const tier = deriveTier(rawTier, effectiveTrust, totalInteractions);
 
-    return { effectiveTrust, tier, thresholds: thresholdsForTier(tier), isUnknown: tier === 'UNKNOWN' };
+    return {
+      effectiveTrust,
+      tier,
+      thresholds: thresholdsForTier(tier),
+      isUnknown: tier === 'UNKNOWN',
+    };
   } catch {
     return unknownSender();
   }
@@ -74,26 +79,34 @@ function unknownSender(): SenderInfo {
 
 function deriveTier(stored: Tier, trust: number, interactions: number): Tier {
   if (stored === 'VIP_PERSONAL') return 'VIP_PERSONAL';
-  if (stored === 'VIP_WORK' || trust >= 0.80) return 'VIP_WORK';
+  if (stored === 'VIP_WORK' || trust >= 0.8) return 'VIP_WORK';
   if (stored === 'UNKNOWN' && interactions < 3) return 'UNKNOWN';
-  if (trust >= 0.50) return 'WORK';
+  if (trust >= 0.5) return 'WORK';
   if (trust > 0) return 'INFO';
   return 'UNKNOWN';
 }
 
 function thresholdsForTier(tier: Tier): TierThresholds {
   switch (tier) {
-    case 'VIP_WORK':      return { createThreshold: 0.50, discardThreshold: 0.25 };
-    case 'VIP_PERSONAL':  return { createThreshold: 0.55, discardThreshold: 0.30 };
-    case 'WORK':          return { createThreshold: 0.65, discardThreshold: 0.35 };
-    case 'INFO':          return { createThreshold: 0.75, discardThreshold: 0.45 };
-    case 'UNKNOWN':       return { createThreshold: 1.1, discardThreshold: -1 };
+    case 'VIP_WORK':
+      return { createThreshold: 0.5, discardThreshold: 0.25 };
+    case 'VIP_PERSONAL':
+      return { createThreshold: 0.55, discardThreshold: 0.3 };
+    case 'WORK':
+      return { createThreshold: 0.65, discardThreshold: 0.35 };
+    case 'INFO':
+      return { createThreshold: 0.75, discardThreshold: 0.45 };
+    case 'UNKNOWN':
+      return { createThreshold: 1.1, discardThreshold: -1 };
   }
 }
 
 // ── Learned keywords ─────────────────────────────────────────────────────────
 
-interface ActiveKw { ngram: string; weight: number }
+interface ActiveKw {
+  ngram: string;
+  weight: number;
+}
 
 async function loadActiveKeywords(): Promise<ActiveKw[]> {
   try {
@@ -145,8 +158,13 @@ function extractDeadline(text: string): number | null {
 
   const nextWeekday = (name: string): number => {
     const days: Record<string, number> = {
-      sunday: 0, monday: 1, tuesday: 2, wednesday: 3,
-      thursday: 4, friday: 5, saturday: 6,
+      sunday: 0,
+      monday: 1,
+      tuesday: 2,
+      wednesday: 3,
+      thursday: 4,
+      friday: 5,
+      saturday: 6,
     };
     const target = days[name];
     if (target === undefined) return 0;
@@ -167,7 +185,15 @@ function extractDeadline(text: string): number | null {
   const daysMatch = lower.match(/\bin (\d+) days?\b/);
   if (daysMatch) deadlines.push(now + parseInt(daysMatch[1], 10) * 86_400_000);
 
-  for (const day of ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']) {
+  for (const day of [
+    'monday',
+    'tuesday',
+    'wednesday',
+    'thursday',
+    'friday',
+    'saturday',
+    'sunday',
+  ]) {
     if (lower.includes(day)) {
       const ts = nextWeekday(day);
       if (ts > 0) deadlines.push(ts);
@@ -185,16 +211,14 @@ function wordCount(text: string): number {
 
 // ── Priority derivation ───────────────────────────────────────────────────────
 
-function derivePriority(
-  score: number,
-  signals: string[]
-): 'URGENT' | 'HIGH' | 'MEDIUM' | 'LOW' {
+function derivePriority(score: number, signals: string[]): 'URGENT' | 'HIGH' | 'MEDIUM' | 'LOW' {
   const hasDeadline = signals.includes('deadline_en');
   if (hasDeadline && score >= 0.65) return 'URGENT';
-  if (hasDeadline && score >= 0.40) return 'HIGH';
-  if (signals.includes('at_mention_specific') || signals.includes('direct_imperative_en')) return 'HIGH';
+  if (hasDeadline && score >= 0.4) return 'HIGH';
+  if (signals.includes('at_mention_specific') || signals.includes('direct_imperative_en'))
+    return 'HIGH';
   if (score >= 0.65) return 'HIGH';
-  if (score >= 0.40) return 'MEDIUM';
+  if (score >= 0.4) return 'MEDIUM';
   return 'LOW';
 }
 
@@ -244,7 +268,7 @@ function evalPositiveSignals(
       latestMessage
     )
   ) {
-    applySignal(acc, 'schedule_change', 0.40);
+    applySignal(acc, 'schedule_change', 0.4);
   }
 
   // deadline_en
@@ -275,10 +299,7 @@ function evalPositiveSignals(
   }
 
   // at_mention_specific
-  if (
-    /@rishabh/i.test(latestMessage) ||
-    /^rishabh[,:]/i.test(latestMessage.trimStart())
-  ) {
+  if (/@rishabh/i.test(latestMessage) || /^rishabh[,:]/i.test(latestMessage.trimStart())) {
     applySignal(acc, 'at_mention_specific', 0.35);
   }
 
@@ -289,7 +310,7 @@ function evalPositiveSignals(
       latestMessage
     )
   ) {
-    applySignal(acc, 'reportee_decision_ask', 0.30);
+    applySignal(acc, 'reportee_decision_ask', 0.3);
   }
 
   // role_addressed
@@ -298,7 +319,7 @@ function evalPositiveSignals(
       latestMessage
     )
   ) {
-    applySignal(acc, 'role_addressed', 0.30);
+    applySignal(acc, 'role_addressed', 0.3);
   }
 
   // bare_imperative_hi
@@ -308,7 +329,7 @@ function evalPositiveSignals(
       latestMessage
     )
   ) {
-    applySignal(acc, 'bare_imperative_hi', 0.30);
+    applySignal(acc, 'bare_imperative_hi', 0.3);
   }
 
   // personal_name_in_body
@@ -333,13 +354,13 @@ function evalPositiveSignals(
       latestMessage
     )
   ) {
-    applySignal(acc, 'managerial_awareness', 0.20);
+    applySignal(acc, 'managerial_awareness', 0.2);
   }
 
   // learned_keyword_match (positive, capped at +0.20)
   for (const kw of activeKws) {
     if (kw.weight > 0 && latestMessage.toLowerCase().includes(kw.ngram.toLowerCase())) {
-      const weight = Math.min(kw.weight, 0.20);
+      const weight = Math.min(kw.weight, 0.2);
       applySignal(acc, 'learned_keyword_match', weight);
       break; // apply once per signal name (first match)
     }
@@ -347,12 +368,12 @@ function evalPositiveSignals(
 
   // thread_context_boost
   if (hasThreadContext) {
-    applySignal(acc, 'thread_context_boost', 0.20);
+    applySignal(acc, 'thread_context_boost', 0.2);
   }
 
   // deadline_hi
   if (/\b(aaj|kal\b|abhi|jaldi|is hafte|agle hafte|turant)\b/i.test(latestMessage)) {
-    applySignal(acc, 'deadline_hi', 0.10);
+    applySignal(acc, 'deadline_hi', 0.1);
   }
 
   // question_mark
@@ -374,7 +395,7 @@ function evalNegativeSignals(
       latestMessage
     )
   ) {
-    applySignal(acc, 'did_you_receive', -0.40);
+    applySignal(acc, 'did_you_receive', -0.4);
   }
 
   // inbound_knowledge_question
@@ -383,7 +404,7 @@ function evalNegativeSignals(
       latestMessage
     )
   ) {
-    applySignal(acc, 'inbound_knowledge_question', -0.30);
+    applySignal(acc, 'inbound_knowledge_question', -0.3);
   }
 
   // achievement_announcement
@@ -392,12 +413,12 @@ function evalNegativeSignals(
       latestMessage
     )
   ) {
-    applySignal(acc, 'achievement_announcement', -0.40);
+    applySignal(acc, 'achievement_announcement', -0.4);
   }
 
   // newsletter_broadcast
   if (/\b(monthly newsletter|weekly digest|edition|roundup|bulletin)\b/i.test(latestMessage)) {
-    applySignal(acc, 'newsletter_broadcast', -0.40);
+    applySignal(acc, 'newsletter_broadcast', -0.4);
   }
 
   // casual_social
@@ -410,13 +431,13 @@ function evalNegativeSignals(
 
   // long_forwarded
   if (wc > 150) {
-    applySignal(acc, 'long_forwarded', -0.50);
+    applySignal(acc, 'long_forwarded', -0.5);
   }
 
   // learned_keyword_reject (negative, capped at -0.20)
   for (const kw of activeKws) {
     if (kw.weight < 0 && latestMessage.toLowerCase().includes(kw.ngram.toLowerCase())) {
-      const weight = Math.max(kw.weight, -0.20);
+      const weight = Math.max(kw.weight, -0.2);
       applySignal(acc, 'learned_keyword_reject', weight);
       break;
     }
@@ -440,15 +461,19 @@ function checkForceInbox(
   // group_compliance_check
   if (signals.includes('group_compliance_check')) return true;
   // role_addressed + low trust
-  if (signals.includes('role_addressed') && effectiveTrust < 0.80) return true;
+  if (signals.includes('role_addressed') && effectiveTrust < 0.8) return true;
   return false;
 }
 
 // ── Main export ───────────────────────────────────────────────────────────────
 
 export async function scoreNotification(notification: NotificationData): Promise<ScoringResult> {
-  const latestMessage =
-    (notification.bigText || notification.text || notification.title || '').trim();
+  const latestMessage = (
+    notification.bigText ||
+    notification.text ||
+    notification.title ||
+    ''
+  ).trim();
 
   const threadText = notification.thread.map((m) => m.text).join(' ');
   const fullText = `${latestMessage} ${threadText}`;

@@ -1,56 +1,85 @@
 // ── Hindi token list for language detection ──────────────────────────────────
 
 const HI_TOKENS = new Set([
-  'kya', 'hai', 'hain', 'tha', 'thi', 'ho', 'kar', 'karo', 'karna',
-  'mujhe', 'tumhe', 'aapko', 'aap', 'tum', 'main', 'hum', 'yaar',
-  'bhai', 'kal', 'aaj', 'abhi', 'jaldi', 'please', 'bhej', 'dekh',
-  'bata', 'nahi', 'mat', 'tak', 'se', 'nahi', 'wala', 'gaya',
+  'kya',
+  'hai',
+  'hain',
+  'tha',
+  'thi',
+  'ho',
+  'kar',
+  'karo',
+  'karna',
+  'mujhe',
+  'tumhe',
+  'aapko',
+  'aap',
+  'tum',
+  'main',
+  'hum',
+  'yaar',
+  'bhai',
+  'kal',
+  'aaj',
+  'abhi',
+  'jaldi',
+  'please',
+  'bhej',
+  'dekh',
+  'bata',
+  'nahi',
+  'mat',
+  'tak',
+  'se',
+  'nahi',
+  'wala',
+  'gaya',
 ]);
 
 // ── Hindi verb → English translation map ─────────────────────────────────────
 
 const HINDI_VERB_MAP: Array<[string, string]> = [
-  ['call kar',    'Call'],
-  ['phone kar',   'Call'],
-  ['submit kar',  'Submit'],
-  ['jama kar',    'Submit'],
-  ['pay kar',     'Pay'],
+  ['call kar', 'Call'],
+  ['phone kar', 'Call'],
+  ['submit kar', 'Submit'],
+  ['jama kar', 'Submit'],
+  ['pay kar', 'Pay'],
   ['forward kar', 'Forward'],
-  ['share kar',   'Share'],
-  ['check kar',   'Check'],
-  ['verify kar',  'Verify'],
-  ['update kar',  'Update'],
-  ['fix kar',     'Fix'],
-  ['dekh lo',     'Check'],
-  ['dekh lena',   'Check'],
-  ['bhar do',     'Pay'],
-  ['bhej do',     'Send'],
-  ['bhej dena',   'Send'],
-  ['bhej',        'Send'],
-  ['bhejo',       'Send'],
-  ['bhejna',      'Send'],
-  ['dekh',        'Check'],
-  ['dekho',       'Check'],
-  ['kar do',      'Do'],
-  ['kar dena',    'Do'],
-  ['karo',        'Do'],
-  ['karna',       'Do'],
-  ['kar',         'Do'],
-  ['bata do',     'Share'],
-  ['bata dena',   'Share'],
-  ['batao',       'Share'],
-  ['bata',        'Share'],
-  ['de do',       'Provide'],
-  ['dena',        'Provide'],
-  ['de',          'Provide'],
-  ['do',          'Provide'],
-  ['aa jao',      'Come'],
-  ['aa jana',     'Come'],
-  ['aao',         'Come'],
-  ['aana',        'Come'],
-  ['aa',          'Come'],
-  ['mil',         'Meet'],
-  ['milo',        'Meet'],
+  ['share kar', 'Share'],
+  ['check kar', 'Check'],
+  ['verify kar', 'Verify'],
+  ['update kar', 'Update'],
+  ['fix kar', 'Fix'],
+  ['dekh lo', 'Check'],
+  ['dekh lena', 'Check'],
+  ['bhar do', 'Pay'],
+  ['bhej do', 'Send'],
+  ['bhej dena', 'Send'],
+  ['bhej', 'Send'],
+  ['bhejo', 'Send'],
+  ['bhejna', 'Send'],
+  ['dekh', 'Check'],
+  ['dekho', 'Check'],
+  ['kar do', 'Do'],
+  ['kar dena', 'Do'],
+  ['karo', 'Do'],
+  ['karna', 'Do'],
+  ['kar', 'Do'],
+  ['bata do', 'Share'],
+  ['bata dena', 'Share'],
+  ['batao', 'Share'],
+  ['bata', 'Share'],
+  ['de do', 'Provide'],
+  ['dena', 'Provide'],
+  ['de', 'Provide'],
+  ['do', 'Provide'],
+  ['aa jao', 'Come'],
+  ['aa jana', 'Come'],
+  ['aao', 'Come'],
+  ['aana', 'Come'],
+  ['aa', 'Come'],
+  ['mil', 'Meet'],
+  ['milo', 'Meet'],
 ];
 
 // Sort by length descending so multi-word variants match first
@@ -80,7 +109,10 @@ function extractObjectWords(text: string, afterIndex: number, maxWords = 6): str
 
 function truncate(text: string, max: number): string {
   if (text.length <= max) return text;
-  return text.slice(0, max).replace(/\s+\S*$/, '').trim();
+  return text
+    .slice(0, max)
+    .replace(/\s+\S*$/, '')
+    .trim();
 }
 
 function capitalize(text: string): string {
@@ -143,9 +175,10 @@ function appSpecificTitle(text: string, packageName: string): string | null {
 // ── Deadline suffix ───────────────────────────────────────────────────────────
 
 function extractDeadlineSuffix(text: string): string {
-  const match = /\bby (today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{1,2}(st|nd|rd|th)?)\b/i.exec(
-    text
-  );
+  const match =
+    /\bby (today|tomorrow|monday|tuesday|wednesday|thursday|friday|saturday|sunday|\d{1,2}(st|nd|rd|th)?)\b/i.exec(
+      text
+    );
   return match ? ` by ${match[1]}` : '';
 }
 
