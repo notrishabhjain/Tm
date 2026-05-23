@@ -90,6 +90,9 @@ export const senderStats = sqliteTable(
     rejectCount: integer('reject_count').notNull().default(0),
     autoAcceptCount: integer('auto_accept_count').notNull().default(0),
     lastSeenAt: integer('last_seen_at').notNull(),
+    // Signal engine additions
+    tier: text('tier').notNull().default('UNKNOWN'), // VIP_WORK|WORK|VIP_PERSONAL|INFO|UNKNOWN
+    seedTrust: real('seed_trust'), // pre-seeded trust 0-1, null = use computed
   },
   (table) => ({
     senderKeyIdx: uniqueIndex('idx_sender_stats_key').on(table.senderKey),

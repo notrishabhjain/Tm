@@ -6,7 +6,6 @@ import {
   StyleSheet,
   ScrollView,
   ActivityIndicator,
-  Image,
   Pressable,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -86,11 +85,11 @@ function formatDueDate(ts: number): string {
 
 export default function ShareScreen(): React.JSX.Element {
   const router = useRouter();
+
   const [parsed, setParsed] = useState<ParsedShare | null>(null);
   const [title, setTitle] = useState('');
   const [priority, setPriority] = useState<Priority>('MEDIUM');
   const [dueDate, setDueDate] = useState<number | null>(null);
-  const [screenshotPath, setScreenshotPath] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -101,23 +100,17 @@ export default function ShareScreen(): React.JSX.Element {
 
   const loadShare = async (): Promise<void> => {
     try {
-      const [intent, screenshot] = await Promise.all([
-        NotificationListener.peekShareIntent(),
-        NotificationListener.getLatestScreenshot(),
-      ]);
+      const intent = await NotificationListener.peekShareIntent();
 
-      if (screenshot) setScreenshotPath(screenshot);
-
-      if (!intent?.text && !screenshot) {
-        setError('Nothing was captured. Please try the accessibility button again.');
+      if (!intent?.text) {
+        setError('Nothing was shared. Please use the Android share menu to share a message.');
         setLoading(false);
         return;
       }
 
-      const rawText = intent?.text ?? '';
+      const rawText = intent.text;
       const p = parseWhatsAppShare(rawText);
-      // For accessibility-captured text, sender is stored in intent.subject
-      const effectiveSender = p.sender || (intent?.subject ?? '');
+      const effectiveSender = p.sender || (intent.subject ?? '');
       const effectiveParsed = { ...p, sender: effectiveSender };
       setParsed(effectiveParsed);
 
@@ -148,8 +141,8 @@ export default function ShareScreen(): React.JSX.Element {
     try {
       await taskRepo.createTask({
         title: title.trim(),
-        body: parsed.rawText,
-        sourceApp: 'manual.capture',
+        body: parsed.message || parsed.rawText,
+        sourceApp: 'manual.share',
         sender: parsed.sender || undefined,
         priority,
         confidence: 0.9,
@@ -158,11 +151,7 @@ export default function ShareScreen(): React.JSX.Element {
         language: 'EN',
         dueDate,
       });
-      // Clean up after task is created
-      await Promise.allSettled([
-        NotificationListener.clearShareIntent(),
-        NotificationListener.clearLatestScreenshot(),
-      ]);
+      await NotificationListener.clearShareIntent().catch(() => null);
       router.replace('/(tabs)/');
     } catch {
       setError('Failed to create task. Please try again.');
@@ -171,10 +160,7 @@ export default function ShareScreen(): React.JSX.Element {
   };
 
   const handleDiscard = async (): Promise<void> => {
-    await Promise.allSettled([
-      NotificationListener.clearShareIntent(),
-      NotificationListener.clearLatestScreenshot(),
-    ]);
+    await NotificationListener.clearShareIntent().catch(() => null);
     router.replace('/(tabs)/');
   };
 
@@ -206,19 +192,6 @@ export default function ShareScreen(): React.JSX.Element {
       </View>
 
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        {/* Screenshot context image */}
-        {screenshotPath ? (
-          <View style={styles.screenshotCard}>
-            <Text style={styles.screenshotLabel}>Context screenshot</Text>
-            <Image
-              source={{ uri: `file://${screenshotPath}` }}
-              style={styles.screenshotImage}
-              resizeMode="contain"
-            />
-          </View>
-        ) : null}
-
-        {/* Sender info */}
         {parsed?.sender ? (
           <View style={styles.metaCard}>
             <View style={styles.metaRow}>
@@ -242,7 +215,6 @@ export default function ShareScreen(): React.JSX.Element {
           </View>
         ) : null}
 
-        {/* Editable title */}
         <Text style={styles.fieldLabel}>Task</Text>
         <TextInput
           style={styles.titleInput}
@@ -254,7 +226,6 @@ export default function ShareScreen(): React.JSX.Element {
           autoFocus
         />
 
-        {/* Original message */}
         <Text style={styles.fieldLabel}>Original Message</Text>
         <View style={styles.messageBox}>
           <Text style={styles.messageText}>{parsed?.message}</Text>
@@ -309,26 +280,6 @@ const styles = StyleSheet.create({
   },
   headerTitle: { fontSize: 20, fontWeight: '700', color: Colors.primary900 },
   content: { padding: 16, gap: 12 },
-  screenshotCard: {
-    backgroundColor: Colors.surfaceLight,
-    borderRadius: 10,
-    padding: 10,
-    elevation: 1,
-  },
-  screenshotLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: Colors.onSurfaceVariantLight,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-    marginBottom: 8,
-  },
-  screenshotImage: {
-    width: '100%',
-    height: 180,
-    borderRadius: 6,
-    backgroundColor: Colors.surfaceVariantLight,
-  },
   metaCard: {
     backgroundColor: Colors.surfaceLight,
     borderRadius: 10,

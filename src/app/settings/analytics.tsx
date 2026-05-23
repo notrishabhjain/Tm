@@ -6,7 +6,6 @@ import { desc, eq, gt, and, sql } from 'drizzle-orm';
 import { Colors } from '@/ui/theme/colors';
 import { db } from '@/data/db/client';
 import { llmMetrics, trainingLog } from '@/data/db/schema';
-import { isLlmLoaded } from '@/services/llm-service';
 
 const SEVEN_DAYS = 7 * 24 * 60 * 60 * 1000;
 
@@ -166,20 +165,6 @@ export default function AnalyticsScreen(): React.JSX.Element {
           </View>
         )}
 
-        {/* ── Model status ── */}
-        <Text style={[styles.sectionLabel, { marginTop: 20 }]}>MODEL STATUS</Text>
-        <View style={styles.card}>
-          <ModelStatusRow
-            label="On-device LLM"
-            loaded={isLlmLoaded()}
-            lastLoadMs={
-              (loadHistory as Array<{ modelId: string; durationMs: number }>).find(
-                (r) => r.modelId === 'on-device-llm'
-              )?.durationMs ?? null
-            }
-          />
-        </View>
-
         {/* ── Decision breakdown ── */}
         {total > 0 && (
           <>
@@ -302,32 +287,6 @@ function StatCard({
       <Text style={styles.statValue}>{value}</Text>
       <Text style={styles.statLabel}>{label}</Text>
       {hint && <Text style={styles.statHint}>{hint}</Text>}
-    </View>
-  );
-}
-
-function ModelStatusRow({
-  label,
-  loaded,
-  lastLoadMs,
-}: {
-  label: string;
-  loaded: boolean;
-  lastLoadMs: number | null;
-}): React.JSX.Element {
-  return (
-    <View style={styles.modelStatusRow}>
-      <View
-        style={[
-          styles.statusDot,
-          { backgroundColor: loaded ? Colors.success : Colors.onSurfaceVariantLight },
-        ]}
-      />
-      <Text style={styles.modelStatusLabel}>{label}</Text>
-      <Text style={styles.modelStatusRight}>
-        {loaded ? 'Loaded' : 'Not loaded'}
-        {lastLoadMs !== null ? ` · last load ${lastLoadMs}ms` : ''}
-      </Text>
     </View>
   );
 }

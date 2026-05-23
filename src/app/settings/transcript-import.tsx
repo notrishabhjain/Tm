@@ -27,8 +27,6 @@ import { PriorityChip } from '@/ui/components/PriorityChip';
 import { runExtractionPipeline } from '@/domain/extraction';
 import { TaskRepository } from '@/data/repositories/TaskRepository';
 import { db } from '@/data/db/client';
-import { isModelLoaded, classifyTaskProbability } from '@/services/onnx-classifier';
-import { isLlmLoaded, extractTasksFromTranscript } from '@/services/llm-service';
 import seedKeywordsRaw from '../../../assets/seed-keywords.json';
 import type { Keyword } from '@/domain/extraction/ruleEngine';
 import type { Priority } from '@/domain/types';
@@ -84,25 +82,6 @@ export default function TranscriptImportScreen(): React.JSX.Element {
     if (!rawText.trim()) return;
     setAnalyzing(true);
     try {
-      // LLM path — richer extraction when Qwen3 is loaded
-      if (isLlmLoaded()) {
-        const llmTasks = await extractTasksFromTranscript(rawText);
-        if (llmTasks.length > 0) {
-          const results: Candidate[] = llmTasks.map((t, i) => ({
-            id: `${Date.now()}-${i}`,
-            sentence: t.title,
-            score: 0.85,
-            priority: t.priority,
-            selected: true,
-          }));
-          setCandidates(results);
-          setStep('review');
-          return;
-        }
-        // LLM returned empty — fall through to rule engine
-      }
-
-      // Rule engine path — sentence-by-sentence extraction
       const sentences = segmentSentences(rawText).slice(0, MAX_SENTENCES);
       if (sentences.length === 0) {
         Alert.alert(
@@ -113,24 +92,11 @@ export default function TranscriptImportScreen(): React.JSX.Element {
         return;
       }
 
-      const classifierAvailable = isModelLoaded();
-      const modelWeight = classifierAvailable ? 0.35 : 0.0;
-
       const results = await Promise.all(
         sentences.map(async (sentence, i) => {
-          const modelInferer = classifierAvailable
-            ? () => classifyTaskProbability(sentence)
-            : undefined;
-
           const result = await runExtractionPipeline(
             { text: sentence, sourceApp: 'transcript' },
-            {
-              vocabulary: SEED_VOCAB,
-              vipSenders: [],
-              ruleWeight: 1.0 - modelWeight,
-              modelWeight,
-              modelInferer,
-            }
+            { vocabulary: SEED_VOCAB, vipSenders: [], ruleWeight: 1.0, modelWeight: 0.0 }
           );
 
           return {
@@ -218,7 +184,6 @@ export default function TranscriptImportScreen(): React.JSX.Element {
         <View style={styles.reviewBanner}>
           <Text style={styles.reviewBannerText}>
             {candidates.length} candidates found · {selectedCount} selected
-            {isLlmLoaded() ? ' · LLM active' : isModelLoaded() ? ' · AI scoring active' : ''}
           </Text>
           <Pressable
             onPress={() =>
@@ -271,7 +236,6 @@ export default function TranscriptImportScreen(): React.JSX.Element {
         <Text style={styles.inputHint}>
           Paste a meeting transcript, email thread, or any long text. TaskMind will extract
           actionable tasks from it.
-          {isLlmLoaded() ? ' LLM active.' : isModelLoaded() ? ' AI classifier active.' : ''}
         </Text>
 
         <View style={styles.textAreaWrapper}>
@@ -306,21 +270,7 @@ export default function TranscriptImportScreen(): React.JSX.Element {
         {analyzing && (
           <View style={styles.analyzingRow}>
             <ActivityIndicator color={Colors.primary500} />
-            <Text style={styles.analyzingText}>
-              {isLlmLoaded()
-                ? 'Running LLM extraction…'
-                : `Running extraction pipeline${isModelLoaded() ? ' + AI scoring' : ''}…`}
-            </Text>
-          </View>
-        )}
-
-        {!isLlmLoaded() && (
-          <View style={styles.modelHint}>
-            <Text style={styles.modelHintText}>
-              {isModelLoaded()
-                ? 'Download Qwen3 LLM in Settings → AI Models for richer task extraction.'
-                : 'Download AI models in Settings → AI Models for better accuracy.'}
-            </Text>
+            <Text style={styles.analyzingText}>Running extraction pipeline…</Text>
           </View>
         )}
       </ScrollView>

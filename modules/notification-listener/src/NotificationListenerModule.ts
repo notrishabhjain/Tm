@@ -1,11 +1,5 @@
 import { requireNativeModule, EventEmitter } from 'expo-modules-core';
-import type {
-  NotificationData,
-  PersistentNotificationParams,
-  PermissionStatus,
-  ManualTriggerData,
-  AccessibilityCaptureData,
-} from './types';
+import type { NotificationData, PersistentNotificationParams, PermissionStatus } from './types';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let NativeModule: any = null;
@@ -114,22 +108,6 @@ const NotificationListenerModule = {
     if (!emitter) return { remove: () => undefined };
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (emitter as any).addListener('onQuickActionOpen', listener) as { remove: () => void };
-  },
-
-  addManualTriggerListener(listener: (data: ManualTriggerData) => void) {
-    if (!emitter) return { remove: () => undefined };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (emitter as any).addListener('onManualTrigger', listener) as { remove: () => void };
-  },
-
-  getPendingCapture(): Promise<AccessibilityCaptureData | null> {
-    if (!NativeModule) return Promise.resolve(null);
-    return NativeModule.getPendingCapture() as Promise<AccessibilityCaptureData | null>;
-  },
-
-  clearPendingCapture(): Promise<void> {
-    if (!NativeModule) return Promise.resolve();
-    return NativeModule.clearPendingCapture() as Promise<void>;
   },
 };
 

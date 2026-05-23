@@ -2,6 +2,7 @@
 // Run `npm run db:generate` to regenerate after schema changes.
 import migration0000 from './0000_initial.sql';
 import migration0001 from './0001_add_due_date.sql';
+import migration0002 from './0002_signal_engine.sql';
 
 export default {
   journal: {
@@ -22,10 +23,18 @@ export default {
         tag: '0001_add_due_date',
         breakpoints: false,
       },
+      {
+        idx: 2,
+        version: '7',
+        when: 1748476800000,
+        tag: '0002_signal_engine',
+        breakpoints: false,
+      },
     ],
   },
   migrations: {
     '0000_initial': migration0000,
     '0001_add_due_date': migration0001,
+    '0002_signal_engine': migration0002,
   },
 };

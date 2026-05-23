@@ -1,3 +1,9 @@
+export interface ThreadMessage {
+  sender: string;
+  text: string;
+  timestamp: number;
+}
+
 export interface NotificationData {
   packageName: string;
   appName: string;
@@ -7,6 +13,12 @@ export interface NotificationData {
   subText: string;
   postTime: number;
   isGroup: boolean;
+  // MessagingStyle thread — last N messages from the conversation
+  thread: ThreadMessage[];
+  // Android metadata for app-context scoring
+  category: string; // CATEGORY_MESSAGE, CATEGORY_EMAIL, etc.
+  channelId: string;
+  importance: number; // 0-5 (IMPORTANCE_NONE to IMPORTANCE_HIGH)
 }
 
 export interface PersistentNotificationParams {
@@ -18,23 +30,4 @@ export interface PersistentNotificationParams {
 
 export type PermissionStatus = 'granted' | 'denied' | 'unknown';
 
-export type NotificationEvent =
-  | 'onNotification'
-  | 'onQuickActionDoneTop'
-  | 'onQuickActionOpen'
-  | 'onManualTrigger';
-
-export interface ManualTriggerData {
-  packageName: string;
-  extractedText: string;
-  sender: string;
-  screenshotPath: string;
-}
-
-export interface AccessibilityCaptureData {
-  packageName: string;
-  extractedText: string;
-  sender: string;
-  screenshotPath: string;
-  timestamp: number;
-}
+export type NotificationEvent = 'onNotification' | 'onQuickActionDoneTop' | 'onQuickActionOpen';

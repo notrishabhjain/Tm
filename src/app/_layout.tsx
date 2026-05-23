@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { AppState, Text, ToastAndroid, View } from 'react-native';
+import { AppState, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -11,22 +11,8 @@ import { getSetting } from '@/data/storage/settings';
 import { seedDatabaseIfNeeded } from '@/services/db-seeder';
 import { handleNotification } from '@/services/notification-handler';
 import { restoreNudgeFromSettings } from '@/services/nudge-scheduler';
-import { TaskRepository } from '@/data/repositories/TaskRepository';
-import { db } from '@/data/db/client';
-import { runExtractionPipeline } from '@/domain/extraction';
-import { DEFAULT_PIPELINE_CONFIG } from '@/domain/extraction/seedConfig';
-import {
-  extractTaskFromText as llmExtractTask,
-  isLlmLoaded,
-  loadLlm,
-  preprocessOcrText,
-  extractAppSpecificText,
-} from '@/services/llm-service';
-import { isLlmCached } from '@/services/llm-manager';
 import NotificationListener from '../../modules/notification-listener/src';
 import '@/i18n';
-
-const taskRepo = new TaskRepository(db);
 
 void SplashScreen.preventAutoHideAsync();
 
@@ -93,8 +79,6 @@ export default function RootLayout(): React.JSX.Element {
   const dbReadyRef = useRef(false);
   const fontsReadyRef = useRef(false);
   const finalizedRef = useRef(false);
-  // Prevent double-processing when both onManualTrigger event AND AppState.active fire
-  const processingCaptureRef = useRef(false);
 
   const [fontsLoaded] = useFonts({
     'Inter-Regular': require('../../assets/fonts/Inter-Regular.ttf'),
@@ -135,10 +119,6 @@ export default function RootLayout(): React.JSX.Element {
         await seedDatabaseIfNeeded();
         const nudgeFreq = getSetting('nudge_freq_minutes');
         void restoreNudgeFromSettings(nudgeFreq);
-        // Auto-load the 0.6B classifier if already downloaded — fire-and-forget
-        void isLlmCached().then((cached) => {
-          if (cached) void loadLlm();
-        });
       } catch (err) {
         console.error('DB init error (non-fatal):', err);
       }
@@ -172,117 +152,11 @@ export default function RootLayout(): React.JSX.Element {
     return () => sub.remove();
   }, []);
 
-  // Accessibility button: auto-create task from pending capture (SharedPreferences).
-  // Triggered by both the onManualTrigger event (if app is in foreground) and
-  // AppState.active (reliable fallback when app was backgrounded).
+  // Share intent: open share screen when app is brought to foreground with a shared text.
   useEffect(() => {
-    const processCapture = async (): Promise<void> => {
-      if (processingCaptureRef.current) return;
-      // DB must be ready before writing tasks
-      if (!dbReadyRef.current) return;
-      try {
-        const capture = await NotificationListener.getPendingCapture();
-        if (!capture) return;
-        // Ignore stale captures older than 60 seconds
-        if (Date.now() - capture.timestamp > 60_000) {
-          await NotificationListener.clearPendingCapture();
-          return;
-        }
-        processingCaptureRef.current = true;
-        // Clear immediately to prevent double-processing
-        await NotificationListener.clearPendingCapture();
-        ToastAndroid.show('Processing screenshot…', ToastAndroid.LONG);
-
-        const rawText = capture.extractedText || '';
-        // Stage 1: strip status bar / nav bar noise.
-        // Stage 2: extract only the relevant portion based on the source app
-        //   (last 15 messages for WhatsApp/Telegram, subject+body for email, etc.)
-        //   so the LLM receives 10-15 clean lines instead of a 900-char OCR dump.
-        const cleaned = preprocessOcrText(rawText);
-        const text = extractAppSpecificText(cleaned, capture.packageName || '');
-
-        // Try LLM first when loaded — richer title, details, and priority from OCR text.
-        // Fall back to rule engine when LLM is unavailable or returns nothing.
-        let finalTitle = '';
-        let finalBody: string | undefined;
-        let finalPriority: import('@/domain/types').Priority = 'MEDIUM';
-        let finalDueDate: number | null = null;
-
-        if (isLlmLoaded() && text.length > 10) {
-          const llmResult = await llmExtractTask(text);
-          if (llmResult?.title) {
-            finalTitle = llmResult.title;
-            finalBody = llmResult.body ?? undefined;
-            finalPriority = llmResult.priority;
-            finalDueDate = llmResult.dueDate;
-          }
-        }
-
-        if (!finalTitle) {
-          const result = await runExtractionPipeline(
-            { text, title: capture.sender || undefined },
-            DEFAULT_PIPELINE_CONFIG
-          );
-
-          // Guard against single-word UI labels that actionExtractor may still
-          // return when OCR catches only app chrome.
-          const UI_LABEL_RE =
-            /^(whatsapp|telegram|instagram|facebook|gmail|chats|status|calls|search|home|inbox|messages|camera|notifications|settings)$/i;
-          const rawExtracted = (result.extractedTitle || '').trim();
-          const safeExtractedTitle =
-            rawExtracted && !UI_LABEL_RE.test(rawExtracted) ? rawExtracted : '';
-
-          finalTitle =
-            safeExtractedTitle ||
-            (capture.sender ? `${capture.sender}: ${text.slice(0, 60)}` : text.slice(0, 80)) ||
-            'Captured task';
-          finalPriority = result.priority;
-          finalDueDate = result.dueDate ?? null;
-        }
-
-        const screenshotPath = capture.screenshotPath || null;
-
-        const newTask = await taskRepo.createTask({
-          title: finalTitle.trim(),
-          body: finalBody || text || undefined,
-          sourceApp: capture.packageName || 'accessibility.capture',
-          sender: capture.sender || undefined,
-          priority: finalPriority,
-          confidence: isLlmLoaded() ? 0.92 : 0.9,
-          needsConfirmation: false,
-          matchedKeywords: [],
-          language: 'EN',
-          dueDate: finalDueDate,
-          screenshotPath,
-        });
-
-        void queryClient.invalidateQueries({ queryKey: ['tasks'] });
-        // Navigate to the newly created task so user can review/confirm
-        router.push(`/task/${newTask.id}`);
-      } catch (err) {
-        ToastAndroid.show(
-          `Could not create task: ${err instanceof Error ? err.message : 'unknown error'}`,
-          ToastAndroid.LONG
-        );
-      } finally {
-        processingCaptureRef.current = false;
-      }
-    };
-
-    const triggerSub = NotificationListener.addManualTriggerListener(() => {
-      void processCapture();
-    });
-
     const checkShare = (): void => {
       void (async () => {
         try {
-          // Check for accessibility captures first
-          const capture = await NotificationListener.getPendingCapture();
-          if (capture) {
-            void processCapture();
-            return;
-          }
-          // Fall back to share intent (from Android share menu)
           const intent = await NotificationListener.peekShareIntent();
           if (intent?.text) {
             router.push('/share');
@@ -299,7 +173,6 @@ export default function RootLayout(): React.JSX.Element {
     });
 
     return () => {
-      triggerSub.remove();
       appStateSub.remove();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
