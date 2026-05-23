@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { AppState, Text, ToastAndroid, View } from 'react-native';
+import { AppState, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Stack, useRouter } from 'expo-router';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -11,8 +11,6 @@ import { getSetting } from '@/data/storage/settings';
 import { seedDatabaseIfNeeded } from '@/services/db-seeder';
 import { handleNotification } from '@/services/notification-handler';
 import { restoreNudgeFromSettings } from '@/services/nudge-scheduler';
-import { loadLlm } from '@/services/llm-service';
-import { isLlmCached } from '@/services/llm-manager';
 import NotificationListener from '../../modules/notification-listener/src';
 import '@/i18n';
 
@@ -81,8 +79,6 @@ export default function RootLayout(): React.JSX.Element {
   const dbReadyRef = useRef(false);
   const fontsReadyRef = useRef(false);
   const finalizedRef = useRef(false);
-  // Prevent double-processing when both onManualTrigger event AND AppState.active fire
-  const processingCaptureRef = useRef(false);
 
   const [fontsLoaded] = useFonts({
     'Inter-Regular': require('../../assets/fonts/Inter-Regular.ttf'),
@@ -123,10 +119,6 @@ export default function RootLayout(): React.JSX.Element {
         await seedDatabaseIfNeeded();
         const nudgeFreq = getSetting('nudge_freq_minutes');
         void restoreNudgeFromSettings(nudgeFreq);
-        // Auto-load the 0.6B classifier if already downloaded — fire-and-forget
-        void isLlmCached().then((cached) => {
-          if (cached) void loadLlm();
-        });
       } catch (err) {
         console.error('DB init error (non-fatal):', err);
       }
@@ -160,63 +152,11 @@ export default function RootLayout(): React.JSX.Element {
     return () => sub.remove();
   }, []);
 
-  // Accessibility button: auto-create task from pending capture (SharedPreferences).
-  // Triggered by both the onManualTrigger event (if app is in foreground) and
-  // AppState.active (reliable fallback when app was backgrounded).
+  // Share intent: open share screen when app is brought to foreground with a shared text.
   useEffect(() => {
-    const processCapture = async (): Promise<void> => {
-      if (processingCaptureRef.current) return;
-      // DB must be ready before writing tasks
-      if (!dbReadyRef.current) return;
-      try {
-        const capture = await NotificationListener.getPendingCapture();
-        if (!capture) return;
-        // Ignore stale captures older than 60 seconds
-        if (Date.now() - capture.timestamp > 60_000) {
-          await NotificationListener.clearPendingCapture();
-          return;
-        }
-        processingCaptureRef.current = true;
-        // Clear immediately to prevent double-processing
-        await NotificationListener.clearPendingCapture();
-
-        // Navigate to share screen for user review.
-        // The share screen runs extraction (LLM → rule engine) and pre-fills the
-        // title field, but the user confirms before the task is saved. This prevents
-        // silent wrong tasks from bad OCR or model errors.
-        router.push({
-          pathname: '/share',
-          params: {
-            captureText: capture.extractedText || '',
-            packageName: capture.packageName || '',
-            sender: capture.sender || '',
-            screenshotPath: capture.screenshotPath || '',
-          },
-        });
-      } catch (err) {
-        ToastAndroid.show(
-          `Could not open capture: ${err instanceof Error ? err.message : 'unknown error'}`,
-          ToastAndroid.LONG
-        );
-      } finally {
-        processingCaptureRef.current = false;
-      }
-    };
-
-    const triggerSub = NotificationListener.addManualTriggerListener(() => {
-      void processCapture();
-    });
-
     const checkShare = (): void => {
       void (async () => {
         try {
-          // Check for accessibility captures first
-          const capture = await NotificationListener.getPendingCapture();
-          if (capture) {
-            void processCapture();
-            return;
-          }
-          // Fall back to share intent (from Android share menu)
           const intent = await NotificationListener.peekShareIntent();
           if (intent?.text) {
             router.push('/share');
@@ -233,7 +173,6 @@ export default function RootLayout(): React.JSX.Element {
     });
 
     return () => {
-      triggerSub.remove();
       appStateSub.remove();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

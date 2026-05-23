@@ -93,6 +93,8 @@ export interface SenderStats {
   rejectCount: number;
   autoAcceptCount: number;
   lastSeenAt: number;
+  tier: string;
+  seedTrust: number | null;
 }
 
 export interface DiscardedLogEntry {

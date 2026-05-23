@@ -11,6 +11,8 @@ function mapRow(row: typeof senderStats.$inferSelect): SenderStats {
     rejectCount: row.rejectCount,
     autoAcceptCount: row.autoAcceptCount,
     lastSeenAt: row.lastSeenAt,
+    tier: row.tier,
+    seedTrust: row.seedTrust ?? null,
   };
 }
 

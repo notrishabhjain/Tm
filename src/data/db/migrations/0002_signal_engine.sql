@@ -1,0 +1,2 @@
+ALTER TABLE sender_stats ADD COLUMN tier TEXT NOT NULL DEFAULT 'UNKNOWN';
+ALTER TABLE sender_stats ADD COLUMN seed_trust REAL;
