@@ -6,6 +6,8 @@ import { Colors } from '@/ui/theme/colors';
 import { Button } from '@/ui/components/Button';
 import NotificationListener from '../../../modules/notification-listener/src';
 
+const DEPTH = 4;
+
 export default function OnboardingPermissionsScreen(): React.JSX.Element {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -34,44 +36,63 @@ export default function OnboardingPermissionsScreen(): React.JSX.Element {
     void router.push('/onboarding/apps');
   };
 
+  const granted = status === 'granted';
+
   return (
     <View
       style={[styles.container, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}
     >
       <View style={styles.content}>
-        <Text style={styles.stepLabel}>Step 1 of 4</Text>
+        <Text style={styles.stepLabel}>STEP 1 OF 4</Text>
         <Text style={styles.title}>Grant Notification Access</Text>
         <Text style={styles.description}>
           TaskMind needs Notification Access to read your notifications and identify actionable
           tasks. This permission is required for the app to work.
         </Text>
 
-        <View style={styles.statusCard}>
+        <View style={[styles.statusWrapper, { paddingRight: DEPTH, paddingBottom: DEPTH }]}>
           <View
             style={[
-              styles.statusDot,
-              { backgroundColor: status === 'granted' ? Colors.success : Colors.error },
+              styles.statusShadow,
+              { backgroundColor: granted ? Colors.neoShadowDefault : Colors.neoShadowUrgent },
             ]}
           />
-          <Text style={styles.statusText}>
-            Notification Access:{' '}
-            <Text style={{ fontWeight: '700' }}>
-              {status === 'granted' ? 'Granted' : 'Not granted'}
+          <View
+            style={[styles.statusCard, { borderColor: granted ? Colors.success : Colors.urgentFg }]}
+          >
+            <View
+              style={[
+                styles.statusDot,
+                { backgroundColor: granted ? Colors.success : Colors.urgentFg },
+              ]}
+            />
+            <Text style={styles.statusText}>
+              Notification Access:{' '}
+              <Text
+                style={[styles.statusBold, { color: granted ? Colors.success : Colors.urgentFg }]}
+              >
+                {granted ? 'Granted' : 'Not granted'}
+              </Text>
             </Text>
-          </Text>
+          </View>
         </View>
 
-        <View style={styles.steps}>
-          <Text style={styles.stepsTitle}>How to grant access:</Text>
-          <Text style={styles.step}>1. Tap "Open Settings" below</Text>
-          <Text style={styles.step}>2. Find TaskMind in the list</Text>
-          <Text style={styles.step}>3. Toggle it ON</Text>
-          <Text style={styles.step}>4. Come back here</Text>
-        </View>
+        <Text style={styles.stepsTitle}>How to grant access:</Text>
+        {[
+          'Tap "Open Settings" below',
+          'Find TaskMind in the list',
+          'Toggle it ON',
+          'Come back here',
+        ].map((step, i) => (
+          <View key={i} style={styles.stepRow}>
+            <Text style={styles.stepNum}>{i + 1}.</Text>
+            <Text style={styles.step}>{step}</Text>
+          </View>
+        ))}
       </View>
 
       <View style={styles.footer}>
-        {status !== 'granted' && (
+        {!granted && (
           <Button
             label="Open Settings"
             onPress={() => void handleGrant()}
@@ -80,10 +101,10 @@ export default function OnboardingPermissionsScreen(): React.JSX.Element {
           />
         )}
         <Button
-          label={status === 'granted' ? 'Continue →' : 'Skip for now'}
+          label={granted ? 'Continue' : 'Skip for now'}
           onPress={handleContinue}
           fullWidth
-          variant={status === 'granted' ? 'primary' : 'secondary'}
+          variant={granted ? 'primary' : 'secondary'}
         />
       </View>
     </View>
@@ -98,13 +119,28 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   content: { flex: 1 },
-  stepLabel: { fontSize: 12, color: Colors.onSurfaceVariantLight, marginBottom: 8 },
-  title: { fontSize: 26, fontWeight: '700', color: Colors.primary900, marginBottom: 16 },
+  stepLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.primary900,
+    letterSpacing: 1.2,
+    marginBottom: 12,
+  },
+  title: { fontSize: 26, fontWeight: '800', color: Colors.primary900, marginBottom: 12 },
   description: {
-    fontSize: 15,
+    fontSize: 14,
     color: Colors.onSurfaceVariantLight,
-    lineHeight: 24,
-    marginBottom: 24,
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  statusWrapper: { position: 'relative', marginBottom: 24 },
+  statusShadow: {
+    position: 'absolute',
+    top: DEPTH,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 2,
   },
   statusCard: {
     flexDirection: 'row',
@@ -112,14 +148,20 @@ const styles = StyleSheet.create({
     gap: 12,
     backgroundColor: Colors.surfaceLight,
     padding: 16,
-    borderRadius: 8,
-    elevation: 1,
-    marginBottom: 24,
+    borderWidth: 2,
+    borderRadius: 2,
   },
-  statusDot: { width: 12, height: 12, borderRadius: 6 },
+  statusDot: { width: 10, height: 10, borderRadius: 2 },
   statusText: { fontSize: 14, color: Colors.onSurfaceLight },
-  steps: { gap: 8 },
-  stepsTitle: { fontSize: 14, fontWeight: '600', color: Colors.onSurfaceLight, marginBottom: 4 },
-  step: { fontSize: 14, color: Colors.onSurfaceVariantLight },
+  statusBold: { fontWeight: '700' },
+  stepsTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.onSurfaceLight,
+    marginBottom: 10,
+  },
+  stepRow: { flexDirection: 'row', gap: 8, marginBottom: 6 },
+  stepNum: { fontSize: 13, fontWeight: '700', color: Colors.primary900, minWidth: 16 },
+  step: { fontSize: 13, color: Colors.onSurfaceVariantLight },
   footer: { gap: 12 },
 });

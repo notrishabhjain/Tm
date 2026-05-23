@@ -5,6 +5,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '@/ui/theme/colors';
 import { Button } from '@/ui/components/Button';
 
+const DEPTH = 4;
+
 export default function OnboardingWelcomeScreen(): React.JSX.Element {
   const insets = useSafeAreaInsets();
 
@@ -13,19 +15,28 @@ export default function OnboardingWelcomeScreen(): React.JSX.Element {
       style={[styles.container, { paddingTop: insets.top + 32, paddingBottom: insets.bottom + 32 }]}
     >
       <View style={styles.hero}>
-        <Text style={styles.logo}>TaskMind</Text>
+        <View style={styles.logoWrapper}>
+          <Text style={styles.logo}>TaskMind</Text>
+          <View style={styles.logoUnderline} />
+        </View>
         <Text style={styles.tagline}>Turn every notification into action.</Text>
         <Text style={styles.description}>
           TaskMind watches your WhatsApp, email, and other apps — and automatically creates
           actionable tasks from messages that need your attention.
         </Text>
-        <Text style={styles.note}>No snooze. No defer. Just do it.</Text>
+        <View style={styles.noteRow}>
+          <View style={styles.noteDot} />
+          <Text style={styles.note}>No snooze. No defer. Just do it.</Text>
+        </View>
       </View>
 
       <View style={styles.footer}>
-        <Link href="/onboarding/permissions" asChild>
-          <Button label="Get Started" fullWidth />
-        </Link>
+        <View style={[styles.btnWrapper, { paddingRight: DEPTH, paddingBottom: DEPTH }]}>
+          <View style={[styles.btnShadow, { backgroundColor: 'rgba(255,255,255,0.3)' }]} />
+          <Link href="/onboarding/permissions" asChild>
+            <Button label="Get Started" fullWidth />
+          </Link>
+        </View>
         <Text style={styles.privacyNote}>
           All processing happens on your device. Nothing leaves your phone.
         </Text>
@@ -41,41 +52,59 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     justifyContent: 'space-between',
   },
-  hero: {
-    flex: 1,
-    justifyContent: 'center',
-  },
+  hero: { flex: 1, justifyContent: 'center' },
+  logoWrapper: { marginBottom: 16 },
   logo: {
     fontSize: 40,
-    fontWeight: '700',
+    fontWeight: '800',
     color: Colors.white,
-    marginBottom: 12,
     letterSpacing: -1,
   },
+  logoUnderline: {
+    height: 3,
+    width: 80,
+    backgroundColor: Colors.urgentFg,
+    marginTop: 4,
+    borderRadius: 1,
+  },
   tagline: {
-    fontSize: 22,
-    fontWeight: '300',
-    color: Colors.primary100,
-    marginBottom: 24,
+    fontSize: 20,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.85)',
+    marginBottom: 20,
   },
   description: {
-    fontSize: 16,
-    color: Colors.primary300,
-    lineHeight: 26,
-    marginBottom: 24,
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.65)',
+    lineHeight: 24,
+    marginBottom: 28,
+  },
+  noteRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  noteDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 2,
+    backgroundColor: Colors.urgentFg,
   },
   note: {
     fontSize: 14,
     color: Colors.urgentFg,
-    fontWeight: '600',
-    letterSpacing: 0.5,
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
-  footer: {
-    gap: 16,
+  footer: { gap: 16 },
+  btnWrapper: { position: 'relative' },
+  btnShadow: {
+    position: 'absolute',
+    top: DEPTH,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 2,
   },
   privacyNote: {
     fontSize: 12,
-    color: Colors.primary300,
+    color: 'rgba(255,255,255,0.45)',
     textAlign: 'center',
   },
 });

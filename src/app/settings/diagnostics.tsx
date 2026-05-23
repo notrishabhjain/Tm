@@ -59,19 +59,22 @@ export default function DiagnosticsScreen(): React.JSX.Element {
 
   return (
     <View style={styles.container}>
-      {/* Header */}
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backText}>‹ Settings</Text>
+        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button">
+          <Text style={styles.backText}>Back</Text>
         </Pressable>
         <Text style={styles.title}>Diagnostics</Text>
-        <Pressable onPress={() => void handleExport()} style={styles.exportButton}>
+        <Pressable onPress={() => void handleExport()} style={styles.exportBtn}>
           <Text style={styles.exportText}>Export</Text>
         </Pressable>
       </View>
 
-      {/* Tab bar */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.tabBar}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.tabBar}
+        contentContainerStyle={styles.tabBarContent}
+      >
         {TABS.map((tab) => (
           <Pressable
             key={tab}
@@ -83,7 +86,6 @@ export default function DiagnosticsScreen(): React.JSX.Element {
         ))}
       </ScrollView>
 
-      {/* Tab content */}
       <ScrollView style={styles.content}>
         {activeTab === 'Notifications' && <NotificationsTab />}
         {activeTab === 'Extraction' && <ExtractionTab />}
@@ -103,7 +105,7 @@ function NotificationsTab(): React.JSX.Element {
       <View style={styles.emptyTab}>
         <Text style={styles.emptyText}>No notifications captured yet.</Text>
         <Text style={styles.emptyHint}>
-          Notifications from monitored apps will appear here after they're processed.
+          Notifications from monitored apps will appear here after they are processed.
         </Text>
       </View>
     );
@@ -223,7 +225,7 @@ function DiscardedTab(): React.JSX.Element {
   if (isLoading) {
     return (
       <View style={styles.emptyTab}>
-        <Text style={styles.emptyText}>Loading…</Text>
+        <Text style={styles.emptyText}>Loading...</Text>
       </View>
     );
   }
@@ -339,7 +341,7 @@ function DBTab(): React.JSX.Element {
   if (isLoading || !stats) {
     return (
       <View style={styles.emptyTab}>
-        <Text style={styles.emptyText}>Loading stats…</Text>
+        <Text style={styles.emptyText}>Loading stats...</Text>
       </View>
     );
   }
@@ -348,8 +350,7 @@ function DBTab(): React.JSX.Element {
 
   return (
     <View style={styles.dbTab}>
-      <Text style={styles.dbTitle}>Database Stats</Text>
-      <SystemRow label="Total Tasks" value={String(totalTasks)} />
+      <SystemRow label="Total Tasks" value={String(totalTasks)} highlight />
       {Object.entries(stats.taskCounts).map(([status, count]) => (
         <SystemRow key={status} label={`  ${status}`} value={String(count)} />
       ))}
@@ -375,11 +376,19 @@ function SystemTab(): React.JSX.Element {
   );
 }
 
-function SystemRow({ label, value }: { label: string; value: string }): React.JSX.Element {
+function SystemRow({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+}): React.JSX.Element {
   return (
     <View style={styles.systemRow}>
-      <Text style={styles.systemLabel}>{label}</Text>
-      <Text style={styles.systemValue}>{value}</Text>
+      <Text style={[styles.systemLabel, highlight && styles.systemLabelHighlight]}>{label}</Text>
+      <Text style={[styles.systemValue, highlight && styles.systemValueHighlight]}>{value}</Text>
     </View>
   );
 }
@@ -390,39 +399,47 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    backgroundColor: Colors.surfaceLight,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.outlineLight,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: Colors.primary900,
+    borderBottomWidth: 2,
+    borderBottomColor: Colors.black,
   },
-  backButton: { padding: 4 },
-  backText: { fontSize: 16, color: Colors.primary500, fontWeight: '600' },
-  title: { fontSize: 17, fontWeight: '700', color: Colors.onSurfaceLight },
-  exportButton: { padding: 4 },
-  exportText: { fontSize: 14, color: Colors.primary500, fontWeight: '600' },
+  backBtn: { padding: 4, minWidth: 56 },
+  backText: { fontSize: 15, color: Colors.white, fontWeight: '600' },
+  title: { fontSize: 17, fontWeight: '800', color: Colors.white },
+  exportBtn: { padding: 4, minWidth: 56, alignItems: 'flex-end' },
+  exportText: { fontSize: 14, color: Colors.white, fontWeight: '700' },
   tabBar: {
     backgroundColor: Colors.surfaceLight,
-    borderBottomWidth: 1,
+    borderBottomWidth: 2,
     borderBottomColor: Colors.outlineLight,
-    maxHeight: 44,
+    maxHeight: 46,
   },
+  tabBarContent: { alignItems: 'center' },
   tab: {
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: 2,
+    paddingVertical: 12,
+    borderBottomWidth: 3,
     borderBottomColor: Colors.transparent,
   },
-  tabActive: { borderBottomColor: Colors.primary500 },
-  tabText: { fontSize: 13, fontWeight: '500', color: Colors.onSurfaceVariantLight },
-  tabTextActive: { color: Colors.primary500, fontWeight: '600' },
+  tabActive: { borderBottomColor: Colors.primary900 },
+  tabText: { fontSize: 12, fontWeight: '600', color: Colors.onSurfaceVariantLight },
+  tabTextActive: { color: Colors.primary900, fontWeight: '800' },
   content: { flex: 1 },
-  emptyTab: { padding: 24, alignItems: 'center' },
-  emptyText: { fontSize: 15, fontWeight: '600', color: Colors.onSurfaceLight, marginBottom: 8 },
+  emptyTab: { padding: 32, alignItems: 'center' },
+  emptyText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.onSurfaceLight,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
   emptyHint: {
-    fontSize: 13,
+    fontSize: 12,
     color: Colors.onSurfaceVariantLight,
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 18,
   },
   logList: { padding: 12, gap: 8 },
   logRow: {
@@ -430,36 +447,36 @@ const styles = StyleSheet.create({
     gap: 10,
     backgroundColor: Colors.surfaceLight,
     padding: 12,
-    borderRadius: 8,
-    elevation: 1,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: Colors.outlineLight,
   },
-  statusDot: { width: 10, height: 10, borderRadius: 5, marginTop: 4 },
+  statusDot: { width: 8, height: 8, borderRadius: 2, marginTop: 4 },
   logContent: { flex: 1 },
-  logTitle: { fontSize: 13, fontWeight: '600', color: Colors.onSurfaceLight, marginBottom: 2 },
-  logBody: { fontSize: 12, color: Colors.onSurfaceVariantLight, marginBottom: 2 },
-  logMeta: { fontSize: 11, color: Colors.onSurfaceVariantLight, fontStyle: 'italic' },
-  logKeywords: { fontSize: 11, color: Colors.primary500, marginTop: 2 },
+  logTitle: { fontSize: 12, fontWeight: '700', color: Colors.onSurfaceLight, marginBottom: 2 },
+  logBody: { fontSize: 11, color: Colors.onSurfaceVariantLight, marginBottom: 2 },
+  logMeta: { fontSize: 11, color: Colors.onSurfaceVariantLight },
+  logKeywords: { fontSize: 11, color: Colors.primary900, marginTop: 2, fontWeight: '600' },
   discardedRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     backgroundColor: Colors.surfaceLight,
     padding: 12,
-    borderRadius: 8,
-    elevation: 1,
+    borderRadius: 2,
+    borderWidth: 1,
+    borderColor: Colors.outlineLight,
     marginBottom: 8,
   },
   promoteBtn: {
-    backgroundColor: Colors.primary500,
-    borderRadius: 6,
+    backgroundColor: Colors.primary900,
+    borderRadius: 2,
     paddingHorizontal: 10,
     paddingVertical: 6,
   },
   promoteBtnDisabled: { opacity: 0.5 },
   promoteBtnText: { color: Colors.white, fontSize: 12, fontWeight: '700' },
   dbTab: { padding: 16 },
-  dbTitle: { fontSize: 15, fontWeight: '600', color: Colors.onSurfaceLight, marginBottom: 8 },
-  dbHint: { fontSize: 13, color: Colors.onSurfaceVariantLight },
   systemRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -467,15 +484,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.outlineLight,
   },
-  systemLabel: { fontSize: 14, color: Colors.onSurfaceVariantLight },
-  systemValue: { fontSize: 14, color: Colors.onSurfaceLight, fontWeight: '500' },
+  systemLabel: { fontSize: 13, color: Colors.onSurfaceVariantLight },
+  systemLabelHighlight: { color: Colors.primary900, fontWeight: '700' },
+  systemValue: { fontSize: 13, color: Colors.onSurfaceLight, fontWeight: '500' },
+  systemValueHighlight: { color: Colors.primary900, fontWeight: '800' },
   refreshBtn: {
     marginTop: 16,
     alignSelf: 'flex-start',
     paddingHorizontal: 16,
     paddingVertical: 8,
-    borderRadius: 6,
-    backgroundColor: Colors.primary500,
+    borderRadius: 2,
+    borderWidth: 2,
+    borderColor: Colors.primary900,
   },
-  refreshBtnText: { color: Colors.white, fontSize: 13, fontWeight: '600' },
+  refreshBtnText: { color: Colors.primary900, fontSize: 13, fontWeight: '700' },
 });

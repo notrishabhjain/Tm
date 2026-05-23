@@ -1,12 +1,3 @@
-/**
- * F-11 — Meeting Transcript / Long Text Import
- *
- * Paste or share any long text (meeting notes, email thread, chat export, etc.).
- * The pipeline segments it into sentences, runs the full extraction engine on each
- * (including ONNX semantic scoring when the model is loaded), and presents a
- * reviewable list of candidate tasks. The user selects which ones to keep.
- */
-
 import React, { useState } from 'react';
 import {
   View,
@@ -53,7 +44,6 @@ interface Candidate {
   selected: boolean;
 }
 
-// Split text into sentences, filtering blanks and very short fragments
 function segmentSentences(text: string): string[] {
   return text
     .split(/(?<=[.!?।\n])\s+|(?<=\n)\s*\n/)
@@ -63,6 +53,7 @@ function segmentSentences(text: string): string[] {
 
 const MIN_DISPLAY_SCORE = 0.25;
 const MAX_SENTENCES = 150;
+const DEPTH = 4;
 
 export default function TranscriptImportScreen(): React.JSX.Element {
   const router = useRouter();
@@ -174,16 +165,20 @@ export default function TranscriptImportScreen(): React.JSX.Element {
     return (
       <View style={styles.container}>
         <View style={styles.header}>
-          <Pressable onPress={() => setStep('input')} style={styles.backButton}>
-            <Text style={styles.backText}>‹ Back</Text>
+          <Pressable
+            onPress={() => setStep('input')}
+            style={styles.backBtn}
+            accessibilityRole="button"
+          >
+            <Text style={styles.backText}>Back</Text>
           </Pressable>
           <Text style={styles.title}>Review Tasks</Text>
-          <View style={{ width: 60 }} />
+          <View style={{ width: 56 }} />
         </View>
 
         <View style={styles.reviewBanner}>
           <Text style={styles.reviewBannerText}>
-            {candidates.length} candidates found · {selectedCount} selected
+            {candidates.length} found · {selectedCount} selected
           </Text>
           <Pressable
             onPress={() =>
@@ -210,7 +205,7 @@ export default function TranscriptImportScreen(): React.JSX.Element {
         <View style={styles.footer}>
           <Button
             label={
-              saving ? 'Saving…' : `Save ${selectedCount} Task${selectedCount !== 1 ? 's' : ''}`
+              saving ? 'Saving...' : `Save ${selectedCount} Task${selectedCount !== 1 ? 's' : ''}`
             }
             variant="primary"
             onPress={() => void handleSave()}
@@ -225,30 +220,33 @@ export default function TranscriptImportScreen(): React.JSX.Element {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backText}>‹ Settings</Text>
+        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button">
+          <Text style={styles.backText}>Back</Text>
         </Pressable>
         <Text style={styles.title}>Analyze Text</Text>
-        <View style={{ width: 70 }} />
+        <View style={{ width: 56 }} />
       </View>
 
       <ScrollView contentContainerStyle={styles.inputContent} keyboardShouldPersistTaps="handled">
         <Text style={styles.inputHint}>
           Paste a meeting transcript, email thread, or any long text. TaskMind will extract
-          actionable tasks from it.
+          actionable tasks from it using the on-device signal engine.
         </Text>
 
-        <View style={styles.textAreaWrapper}>
-          <TextInput
-            style={styles.textArea}
-            value={rawText}
-            onChangeText={setRawText}
-            multiline
-            placeholder="Paste your text here…"
-            placeholderTextColor={Colors.onSurfaceVariantLight}
-            textAlignVertical="top"
-          />
-          {rawText.length > 0 && <Text style={styles.charCount}>{rawText.length} chars</Text>}
+        <View style={[styles.textAreaWrapper, { paddingRight: DEPTH, paddingBottom: DEPTH }]}>
+          <View style={styles.textAreaShadow} />
+          <View style={styles.textAreaBorder}>
+            <TextInput
+              style={styles.textArea}
+              value={rawText}
+              onChangeText={setRawText}
+              multiline
+              placeholder="Paste your text here..."
+              placeholderTextColor={Colors.onSurfaceVariantLight}
+              textAlignVertical="top"
+            />
+            {rawText.length > 0 && <Text style={styles.charCount}>{rawText.length} chars</Text>}
+          </View>
         </View>
 
         <View style={styles.inputActions}>
@@ -259,7 +257,7 @@ export default function TranscriptImportScreen(): React.JSX.Element {
             style={styles.halfBtn}
           />
           <Button
-            label={analyzing ? 'Analyzing…' : 'Analyze Text'}
+            label={analyzing ? 'Analyzing...' : 'Analyze Text'}
             variant="primary"
             onPress={() => void handleAnalyze()}
             loading={analyzing}
@@ -269,8 +267,8 @@ export default function TranscriptImportScreen(): React.JSX.Element {
 
         {analyzing && (
           <View style={styles.analyzingRow}>
-            <ActivityIndicator color={Colors.primary500} />
-            <Text style={styles.analyzingText}>Running extraction pipeline…</Text>
+            <ActivityIndicator color={Colors.primary900} />
+            <Text style={styles.analyzingText}>Running signal extraction...</Text>
           </View>
         )}
       </ScrollView>
@@ -288,31 +286,42 @@ function CandidateRow({
   const priorityColor = getPriorityColor(candidate.priority);
 
   return (
-    <Pressable
-      style={[styles.candidateRow, candidate.selected && styles.candidateRowSelected]}
-      onPress={onToggle}
-    >
-      <View style={[styles.checkbox, candidate.selected && styles.checkboxSelected]}>
-        {candidate.selected && <View style={styles.checkmarkFill} />}
-      </View>
-      <View style={styles.candidateContent}>
-        <Text style={styles.candidateSentence} numberOfLines={3}>
-          {candidate.sentence}
-        </Text>
-        <View style={styles.candidateMeta}>
-          <PriorityChip priority={candidate.priority} />
-          <View style={styles.scoreBadge}>
-            <View
-              style={[
-                styles.scoreBar,
-                { width: `${Math.round(candidate.score * 100)}%`, backgroundColor: priorityColor },
-              ]}
-            />
-          </View>
-          <Text style={styles.scoreText}>{Math.round(candidate.score * 100)}%</Text>
+    <View style={[styles.candidateWrapper, { paddingRight: DEPTH, paddingBottom: DEPTH }]}>
+      <View
+        style={[
+          styles.candidateShadow,
+          { backgroundColor: candidate.selected ? Colors.neoShadowDefault : Colors.outlineLight },
+        ]}
+      />
+      <Pressable
+        style={[styles.candidateRow, candidate.selected && styles.candidateRowSelected]}
+        onPress={onToggle}
+      >
+        <View style={[styles.checkbox, candidate.selected && styles.checkboxSelected]}>
+          {candidate.selected && <View style={styles.checkmarkFill} />}
         </View>
-      </View>
-    </Pressable>
+        <View style={styles.candidateContent}>
+          <Text style={styles.candidateSentence} numberOfLines={3}>
+            {candidate.sentence}
+          </Text>
+          <View style={styles.candidateMeta}>
+            <PriorityChip priority={candidate.priority} />
+            <View style={styles.scoreBadge}>
+              <View
+                style={[
+                  styles.scoreBar,
+                  {
+                    width: `${Math.round(candidate.score * 100)}%`,
+                    backgroundColor: priorityColor,
+                  },
+                ]}
+              />
+            </View>
+            <Text style={styles.scoreText}>{Math.round(candidate.score * 100)}%</Text>
+          </View>
+        </View>
+      </Pressable>
+    </View>
   );
 }
 
@@ -322,25 +331,38 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    backgroundColor: Colors.surfaceLight,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.outlineLight,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: Colors.primary900,
+    borderBottomWidth: 2,
+    borderBottomColor: Colors.black,
   },
-  backButton: { padding: 4 },
-  backText: { fontSize: 16, color: Colors.primary500, fontWeight: '600' },
-  title: { fontSize: 17, fontWeight: '700', color: Colors.onSurfaceLight },
+  backBtn: { padding: 4, minWidth: 56 },
+  backText: { fontSize: 15, color: Colors.white, fontWeight: '600' },
+  title: { fontSize: 17, fontWeight: '800', color: Colors.white },
   inputContent: { padding: 16, gap: 14, paddingBottom: 32 },
   inputHint: { fontSize: 13, color: Colors.onSurfaceVariantLight, lineHeight: 20 },
   textAreaWrapper: { position: 'relative' },
-  textArea: {
+  textAreaShadow: {
+    position: 'absolute',
+    top: DEPTH,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: Colors.neoShadowDefault,
+    borderRadius: 2,
+  },
+  textAreaBorder: {
     backgroundColor: Colors.surfaceLight,
-    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: Colors.primary900,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  textArea: {
     padding: 14,
     fontSize: 14,
     color: Colors.onSurfaceLight,
-    borderWidth: 1,
-    borderColor: Colors.outlineLight,
     minHeight: 200,
     maxHeight: 400,
     textAlignVertical: 'top',
@@ -362,40 +384,42 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   analyzingText: { fontSize: 13, color: Colors.onSurfaceVariantLight },
-  modelHint: {
-    backgroundColor: Colors.surfaceVariantLight,
-    borderRadius: 8,
-    padding: 12,
-  },
-  modelHintText: { fontSize: 12, color: Colors.onSurfaceVariantLight, lineHeight: 18 },
   reviewBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 12,
     paddingHorizontal: 16,
-    backgroundColor: Colors.surfaceVariantLight,
-    borderBottomWidth: 1,
+    paddingVertical: 12,
+    backgroundColor: Colors.surfaceLight,
+    borderBottomWidth: 2,
     borderBottomColor: Colors.outlineLight,
   },
   reviewBannerText: { fontSize: 12, color: Colors.onSurfaceVariantLight, flex: 1 },
-  selectAllText: { fontSize: 13, color: Colors.primary500, fontWeight: '500' },
+  selectAllText: { fontSize: 13, color: Colors.primary900, fontWeight: '700' },
   reviewList: { padding: 12, gap: 8, paddingBottom: 16 },
+  candidateWrapper: { position: 'relative' },
+  candidateShadow: {
+    position: 'absolute',
+    top: DEPTH,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 2,
+  },
   candidateRow: {
     flexDirection: 'row',
     backgroundColor: Colors.surfaceLight,
-    borderRadius: 10,
+    borderRadius: 2,
     padding: 12,
     gap: 12,
-    elevation: 1,
     borderWidth: 2,
-    borderColor: Colors.transparent,
+    borderColor: Colors.outlineLight,
   },
-  candidateRowSelected: { borderColor: Colors.primary500 },
+  candidateRowSelected: { borderColor: Colors.primary900 },
   checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 4,
+    width: 20,
+    height: 20,
+    borderRadius: 2,
     borderWidth: 2,
     borderColor: Colors.outlineLight,
     justifyContent: 'center',
@@ -403,10 +427,10 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   checkboxSelected: {
-    backgroundColor: Colors.primary500,
-    borderColor: Colors.primary500,
+    backgroundColor: Colors.primary900,
+    borderColor: Colors.primary900,
   },
-  checkmarkFill: { width: 10, height: 10, borderRadius: 2, backgroundColor: Colors.white },
+  checkmarkFill: { width: 8, height: 8, borderRadius: 1, backgroundColor: Colors.white },
   candidateContent: { flex: 1, gap: 6 },
   candidateSentence: { fontSize: 13, color: Colors.onSurfaceLight, lineHeight: 19 },
   candidateMeta: { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -422,7 +446,7 @@ const styles = StyleSheet.create({
   footer: {
     padding: 16,
     backgroundColor: Colors.surfaceLight,
-    borderTopWidth: 1,
+    borderTopWidth: 2,
     borderTopColor: Colors.outlineLight,
   },
 });

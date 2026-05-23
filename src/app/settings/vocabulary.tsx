@@ -9,6 +9,7 @@ import { db } from '@/data/db/client';
 import type { LearnedKeyword } from '@/data/repositories/LearnedKeywordRepository';
 
 const repo = new LearnedKeywordRepository(db);
+const DEPTH = 4;
 
 type VocabTab = 'ACTIVE' | 'PENDING' | 'DEMOTED';
 
@@ -35,7 +36,6 @@ export default function VocabularyScreen(): React.JSX.Element {
   });
 
   const filtered = all.filter((k) => k.status === tab);
-
   const tabCounts: Record<VocabTab, number> = {
     ACTIVE: all.filter((k) => k.status === 'ACTIVE').length,
     PENDING: all.filter((k) => k.status === 'PENDING').length,
@@ -51,30 +51,31 @@ export default function VocabularyScreen(): React.JSX.Element {
 
   const emptyMessages: Record<VocabTab, { title: string; description: string }> = {
     ACTIVE: {
-      title: 'No active keywords yet',
+      title: 'No active keywords',
       description:
-        'TaskMind learns from the tasks you confirm. Frequent phrases (3+ times) are promoted here and used to improve detection.',
+        'TaskMind learns from tasks you confirm. Phrases seen 3+ times are promoted here and improve detection.',
     },
     PENDING: {
       title: 'Nothing pending',
-      description: 'Phrases seen fewer than 3 times appear here while they accumulate evidence.',
+      description: 'Phrases seen fewer than 3 times appear here while accumulating evidence.',
     },
     DEMOTED: {
       title: 'Nothing demoted',
-      description: 'Keywords you manually remove from Active appear here.',
+      description: 'Keywords you remove from Active appear here.',
     },
   };
 
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backText}>‹ Settings</Text>
+        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button">
+          <Text style={styles.backText}>Back</Text>
         </Pressable>
         <Text style={styles.title}>Learned Vocabulary</Text>
-        <View style={{ width: 70 }} />
+        <View style={{ width: 56 }} />
       </View>
 
+      {/* Tab bar */}
       <View style={styles.tabBar}>
         {(['ACTIVE', 'PENDING', 'DEMOTED'] as VocabTab[]).map((t) => (
           <Pressable
@@ -100,62 +101,50 @@ export default function VocabularyScreen(): React.JSX.Element {
           />
         }
         renderItem={({ item }) => (
-          <KeywordRow
-            keyword={item}
-            tab={tab}
-            onPromote={() => setStatusMutation.mutate({ id: item.id, status: 'ACTIVE' })}
-            onDemote={() => setStatusMutation.mutate({ id: item.id, status: 'DEMOTED' })}
-            onRemove={() => handleRemove(item)}
-          />
+          <View style={[styles.rowWrapper, { paddingRight: DEPTH, paddingBottom: DEPTH }]}>
+            <View style={styles.rowShadow} />
+            <View style={styles.row}>
+              <View style={styles.rowMain}>
+                <Text style={styles.phrase}>{item.ngram}</Text>
+                <Text style={styles.meta}>
+                  {item.language} · seen {item.occurrenceCount}×
+                </Text>
+              </View>
+              <View style={styles.actions}>
+                {tab === 'PENDING' && (
+                  <Pressable
+                    style={styles.actionBtn}
+                    onPress={() => setStatusMutation.mutate({ id: item.id, status: 'ACTIVE' })}
+                  >
+                    <Text style={[styles.actionBtnText, { color: Colors.success }]}>Activate</Text>
+                  </Pressable>
+                )}
+                {tab === 'ACTIVE' && (
+                  <Pressable
+                    style={styles.actionBtn}
+                    onPress={() => setStatusMutation.mutate({ id: item.id, status: 'DEMOTED' })}
+                  >
+                    <Text style={[styles.actionBtnText, { color: Colors.onSurfaceVariantLight }]}>
+                      Demote
+                    </Text>
+                  </Pressable>
+                )}
+                {tab === 'DEMOTED' && (
+                  <Pressable
+                    style={styles.actionBtn}
+                    onPress={() => setStatusMutation.mutate({ id: item.id, status: 'ACTIVE' })}
+                  >
+                    <Text style={[styles.actionBtnText, { color: Colors.success }]}>Restore</Text>
+                  </Pressable>
+                )}
+                <Pressable style={styles.actionBtn} onPress={() => handleRemove(item)}>
+                  <Text style={[styles.actionBtnText, { color: Colors.urgentFg }]}>Remove</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
         )}
       />
-    </View>
-  );
-}
-
-function KeywordRow({
-  keyword,
-  tab,
-  onPromote,
-  onDemote,
-  onRemove,
-}: {
-  keyword: LearnedKeyword;
-  tab: VocabTab;
-  onPromote: () => void;
-  onDemote: () => void;
-  onRemove: () => void;
-}): React.JSX.Element {
-  return (
-    <View style={styles.row}>
-      <View style={styles.rowMain}>
-        <Text style={styles.phrase}>{keyword.ngram}</Text>
-        <Text style={styles.meta}>
-          {keyword.language} · seen {keyword.occurrenceCount}×
-        </Text>
-      </View>
-      <View style={styles.actions}>
-        {tab === 'PENDING' && (
-          <Pressable style={styles.actionBtn} onPress={onPromote}>
-            <Text style={[styles.actionBtnText, { color: Colors.success }]}>Activate</Text>
-          </Pressable>
-        )}
-        {tab === 'ACTIVE' && (
-          <Pressable style={styles.actionBtn} onPress={onDemote}>
-            <Text style={[styles.actionBtnText, { color: Colors.onSurfaceVariantLight }]}>
-              Demote
-            </Text>
-          </Pressable>
-        )}
-        {tab === 'DEMOTED' && (
-          <Pressable style={styles.actionBtn} onPress={onPromote}>
-            <Text style={[styles.actionBtnText, { color: Colors.success }]}>Restore</Text>
-          </Pressable>
-        )}
-        <Pressable style={styles.actionBtn} onPress={onRemove}>
-          <Text style={[styles.actionBtnText, { color: Colors.error }]}>Remove</Text>
-        </Pressable>
-      </View>
     </View>
   );
 }
@@ -166,46 +155,56 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
-    backgroundColor: Colors.surfaceLight,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.outlineLight,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: Colors.primary900,
+    borderBottomWidth: 2,
+    borderBottomColor: Colors.black,
   },
-  backButton: { padding: 4 },
-  backText: { fontSize: 16, color: Colors.primary500, fontWeight: '600' },
-  title: { fontSize: 17, fontWeight: '700', color: Colors.onSurfaceLight },
+  backBtn: { padding: 4, minWidth: 56 },
+  backText: { fontSize: 15, color: Colors.white, fontWeight: '600' },
+  title: { fontSize: 17, fontWeight: '800', color: Colors.white },
   tabBar: {
     flexDirection: 'row',
     backgroundColor: Colors.surfaceLight,
-    borderBottomWidth: 1,
+    borderBottomWidth: 2,
     borderBottomColor: Colors.outlineLight,
   },
   tab: {
     flex: 1,
-    paddingVertical: 10,
+    paddingVertical: 12,
     alignItems: 'center',
-    borderBottomWidth: 2,
+    borderBottomWidth: 3,
     borderBottomColor: Colors.transparent,
   },
-  tabActive: { borderBottomColor: Colors.primary500 },
-  tabText: { fontSize: 13, fontWeight: '500', color: Colors.onSurfaceVariantLight },
-  tabTextActive: { color: Colors.primary500, fontWeight: '600' },
-  list: { paddingVertical: 8 },
+  tabActive: { borderBottomColor: Colors.primary900 },
+  tabText: { fontSize: 12, fontWeight: '600', color: Colors.onSurfaceVariantLight },
+  tabTextActive: { color: Colors.primary900, fontWeight: '800' },
+  list: { paddingTop: 8, paddingBottom: 16 },
   emptyContainer: { flex: 1 },
+  rowWrapper: { marginHorizontal: 16, marginVertical: 4, position: 'relative' },
+  rowShadow: {
+    position: 'absolute',
+    top: DEPTH,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: Colors.neoShadowDefault,
+    borderRadius: 2,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.surfaceLight,
-    marginHorizontal: 16,
-    marginVertical: 4,
-    borderRadius: 8,
+    borderWidth: 2,
+    borderColor: Colors.primary900,
+    borderRadius: 2,
     padding: 14,
-    elevation: 1,
   },
   rowMain: { flex: 1 },
-  phrase: { fontSize: 14, fontWeight: '600', color: Colors.onSurfaceLight, marginBottom: 2 },
-  meta: { fontSize: 12, color: Colors.onSurfaceVariantLight },
+  phrase: { fontSize: 14, fontWeight: '700', color: Colors.onSurfaceLight, marginBottom: 2 },
+  meta: { fontSize: 11, color: Colors.onSurfaceVariantLight },
   actions: { flexDirection: 'row', gap: 12 },
   actionBtn: { padding: 4 },
-  actionBtnText: { fontSize: 13, fontWeight: '500' },
+  actionBtnText: { fontSize: 12, fontWeight: '700' },
 });

@@ -13,6 +13,8 @@ const FREQUENCY_OPTIONS = [
   { label: 'Every 4 hours', value: 240 },
 ] as const;
 
+const DEPTH = 4;
+
 export default function OnboardingNudgesScreen(): React.JSX.Element {
   const router = useRouter();
   const [frequencyMinutes, setFrequencyMinutes] = useState<number>(60);
@@ -27,54 +29,69 @@ export default function OnboardingNudgesScreen(): React.JSX.Element {
   return (
     <View style={styles.container}>
       <View style={styles.content}>
-        <Text style={styles.stepLabel}>Step 5 of 5</Text>
+        <Text style={styles.stepLabel}>STEP 5 OF 5</Text>
         <Text style={styles.title}>Configure Nudges</Text>
         <Text style={styles.description}>
           TaskMind can send a persistent notification reminding you of pending tasks. Configure when
           and how often.
         </Text>
 
-        <Text style={styles.sectionLabel}>Nudge frequency</Text>
-        <View style={styles.optionList}>
-          {FREQUENCY_OPTIONS.map((opt) => (
-            <Pressable
-              key={opt.value}
-              style={[styles.option, frequencyMinutes === opt.value && styles.optionSelected]}
-              onPress={() => setFrequencyMinutes(opt.value)}
-            >
-              <View
-                style={[styles.radio, frequencyMinutes === opt.value && styles.radioSelected]}
-              />
-              <Text
+        <Text style={styles.sectionLabel}>NUDGE FREQUENCY</Text>
+        <View style={[styles.cardWrapper, { paddingRight: DEPTH, paddingBottom: DEPTH }]}>
+          <View style={styles.cardShadow} />
+          <View style={styles.card}>
+            {FREQUENCY_OPTIONS.map((opt, i) => (
+              <Pressable
+                key={opt.value}
                 style={[
-                  styles.optionLabel,
-                  frequencyMinutes === opt.value && styles.optionLabelSelected,
+                  styles.optionRow,
+                  i < FREQUENCY_OPTIONS.length - 1 && styles.rowBorder,
+                  frequencyMinutes === opt.value && styles.optionSelected,
                 ]}
+                onPress={() => setFrequencyMinutes(opt.value)}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: frequencyMinutes === opt.value }}
               >
-                {opt.label}
-              </Text>
-            </Pressable>
-          ))}
+                <View
+                  style={[styles.radio, frequencyMinutes === opt.value && styles.radioSelected]}
+                />
+                <Text
+                  style={[
+                    styles.optionLabel,
+                    frequencyMinutes === opt.value && styles.optionLabelSelected,
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
         </View>
 
-        <View style={styles.toggleRow}>
-          <View style={styles.toggleLabel}>
-            <Text style={styles.toggleTitle}>Urgent overrides quiet hours</Text>
-            <Text style={styles.toggleSubtitle}>
-              URGENT tasks always nudge, even during quiet hours
-            </Text>
+        <Text style={styles.sectionLabel}>BEHAVIOUR</Text>
+        <View style={[styles.cardWrapper, { paddingRight: DEPTH, paddingBottom: DEPTH }]}>
+          <View style={styles.cardShadow} />
+          <View style={styles.card}>
+            <View style={styles.toggleRow}>
+              <View style={styles.toggleInfo}>
+                <Text style={styles.toggleTitle}>Urgent overrides quiet hours</Text>
+                <Text style={styles.toggleSubtitle}>
+                  URGENT tasks always nudge, even during quiet hours
+                </Text>
+              </View>
+              <Switch
+                value={urgentOverride}
+                onValueChange={setUrgentOverride}
+                trackColor={{ true: Colors.primary900, false: Colors.outlineLight }}
+                thumbColor={Colors.white}
+              />
+            </View>
           </View>
-          <Switch
-            value={urgentOverride}
-            onValueChange={setUrgentOverride}
-            trackColor={{ true: Colors.primary500 }}
-            thumbColor={Colors.white}
-          />
         </View>
       </View>
 
       <View style={styles.footer}>
-        <Button label="Continue →" onPress={handleContinue} fullWidth />
+        <Button label="Continue" onPress={handleContinue} fullWidth />
         <Button
           label="Skip for now"
           onPress={() => void router.push('/onboarding/done')}
@@ -93,56 +110,75 @@ const styles = StyleSheet.create({
     padding: 24,
     justifyContent: 'space-between',
   },
-  content: { flex: 1, paddingTop: 24 },
-  stepLabel: { fontSize: 12, color: Colors.onSurfaceVariantLight, marginBottom: 8 },
-  title: { fontSize: 26, fontWeight: '700', color: Colors.primary900, marginBottom: 12 },
-  description: {
-    fontSize: 15,
-    color: Colors.onSurfaceVariantLight,
-    lineHeight: 24,
-    marginBottom: 24,
-  },
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.onSurfaceVariantLight,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
+  content: { flex: 1 },
+  stepLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.primary900,
+    letterSpacing: 1.2,
     marginBottom: 12,
   },
-  optionList: { gap: 8, marginBottom: 24 },
-  option: {
+  title: { fontSize: 26, fontWeight: '800', color: Colors.primary900, marginBottom: 12 },
+  description: {
+    fontSize: 14,
+    color: Colors.onSurfaceVariantLight,
+    lineHeight: 22,
+    marginBottom: 20,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: Colors.primary900,
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    marginBottom: 8,
+    marginTop: 8,
+  },
+  cardWrapper: { position: 'relative', marginBottom: 16 },
+  cardShadow: {
+    position: 'absolute',
+    top: DEPTH,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: Colors.neoShadowDefault,
+    borderRadius: 2,
+  },
+  card: {
+    backgroundColor: Colors.surfaceLight,
+    borderWidth: 2,
+    borderColor: Colors.primary900,
+    borderRadius: 2,
+    overflow: 'hidden',
+  },
+  optionRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     gap: 12,
-    padding: 14,
-    borderRadius: 10,
-    backgroundColor: Colors.surfaceLight,
-    borderWidth: 1.5,
-    borderColor: 'transparent',
   },
-  optionSelected: { borderColor: Colors.primary500, backgroundColor: Colors.primary50 },
+  rowBorder: { borderBottomWidth: 1, borderBottomColor: Colors.outlineLight },
+  optionSelected: { backgroundColor: Colors.primary50 },
   radio: {
     width: 18,
     height: 18,
-    borderRadius: 9,
+    borderRadius: 2,
     borderWidth: 2,
     borderColor: Colors.onSurfaceVariantLight,
   },
-  radioSelected: { borderColor: Colors.primary500, backgroundColor: Colors.primary500 },
+  radioSelected: { borderColor: Colors.primary900, backgroundColor: Colors.primary900 },
   optionLabel: { fontSize: 15, color: Colors.onSurfaceLight },
-  optionLabelSelected: { color: Colors.primary900, fontWeight: '600' },
+  optionLabelSelected: { color: Colors.primary900, fontWeight: '700' },
   toggleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: Colors.surfaceLight,
-    padding: 16,
-    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     gap: 12,
   },
-  toggleLabel: { flex: 1 },
-  toggleTitle: { fontSize: 15, color: Colors.onSurfaceLight, fontWeight: '500' },
+  toggleInfo: { flex: 1 },
+  toggleTitle: { fontSize: 15, color: Colors.onSurfaceLight, fontWeight: '600' },
   toggleSubtitle: { fontSize: 12, color: Colors.onSurfaceVariantLight, marginTop: 2 },
   footer: { gap: 12 },
 });

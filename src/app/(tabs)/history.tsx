@@ -1,8 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { View, Text, FlatList, StyleSheet, Pressable } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import { Colors } from '@/ui/theme/colors';
-import { getPriorityColor } from '@/ui/theme/colors';
+import { Colors, getPriorityColor } from '@/ui/theme/colors';
 import { EmptyState } from '@/ui/components/EmptyState';
 import { TaskRepository } from '@/data/repositories/TaskRepository';
 import { db } from '@/data/db/client';
@@ -11,6 +10,7 @@ import type { Task, Priority } from '@/domain/types';
 const taskRepo = new TaskRepository(db);
 
 type FilterPeriod = 'TODAY' | 'WEEK' | 'ALL';
+const DEPTH = 4;
 
 const FILTER_LABELS: Record<FilterPeriod, string> = {
   TODAY: 'Today',
@@ -58,10 +58,9 @@ export default function HistoryScreen(): React.JSX.Element {
     return counts;
   }, [tasks]);
 
-  const hasPriorityData = tasks.length > 0;
-
   return (
     <View style={styles.container}>
+      {/* Filter strip */}
       <View style={styles.filterRow}>
         {(Object.keys(FILTER_LABELS) as FilterPeriod[]).map((f) => (
           <Pressable
@@ -76,22 +75,26 @@ export default function HistoryScreen(): React.JSX.Element {
         ))}
       </View>
 
-      {hasPriorityData && (
-        <View style={styles.statsCard}>
-          <View style={styles.statsRow}>
-            <Text style={styles.statsTotal}>{tasks.length} completed</Text>
-          </View>
-          <View style={styles.breakdownRow}>
-            {(Object.keys(priorityBreakdown) as Priority[])
-              .filter((p) => priorityBreakdown[p] > 0)
-              .map((p) => (
-                <View key={p} style={styles.breakdownItem}>
-                  <View style={[styles.breakdownDot, { backgroundColor: getPriorityColor(p) }]} />
-                  <Text style={styles.breakdownLabel}>
-                    {p.charAt(0) + p.slice(1).toLowerCase()} {priorityBreakdown[p]}
-                  </Text>
-                </View>
-              ))}
+      {/* Stats card */}
+      {tasks.length > 0 && (
+        <View style={[styles.statsWrapper, { paddingRight: DEPTH, paddingBottom: DEPTH }]}>
+          <View style={styles.statsShadow} />
+          <View style={styles.statsCard}>
+            <Text style={styles.statsTotal}>
+              {tasks.length} task{tasks.length !== 1 ? 's' : ''} completed
+            </Text>
+            <View style={styles.breakdownRow}>
+              {(Object.keys(priorityBreakdown) as Priority[])
+                .filter((p) => priorityBreakdown[p] > 0)
+                .map((p) => (
+                  <View key={p} style={styles.breakdownItem}>
+                    <View style={[styles.breakdownDot, { backgroundColor: getPriorityColor(p) }]} />
+                    <Text style={styles.breakdownLabel}>
+                      {p.charAt(0) + p.slice(1).toLowerCase()} {priorityBreakdown[p]}
+                    </Text>
+                  </View>
+                ))}
+            </View>
           </View>
         </View>
       )}
@@ -107,7 +110,7 @@ export default function HistoryScreen(): React.JSX.Element {
               title={filter === 'ALL' ? 'No history yet' : 'Nothing in this period'}
               description={
                 filter === 'ALL'
-                  ? 'Completed tasks will appear here. Complete tasks by swiping right on the home screen.'
+                  ? 'Completed tasks will appear here.'
                   : 'Try selecting a wider time range.'
               }
             />
@@ -122,140 +125,120 @@ function HistoryTaskRow({ task }: { task: Task }): React.JSX.Element {
   const priorityColor = getPriorityColor(task.priority);
 
   return (
-    <View style={styles.row}>
-      <View style={[styles.priorityDot, { backgroundColor: priorityColor }]} />
-      <View style={styles.rowContent}>
-        <Text style={styles.taskTitle} numberOfLines={1}>
-          {task.title}
-        </Text>
-        <Text style={styles.rowMeta}>
-          {task.completedAt ? formatDate(task.completedAt) : 'Unknown'} ·{' '}
-          {task.sourceApp.split('.').pop()}
-        </Text>
-      </View>
-      <View style={styles.doneBadge}>
-        <Text style={styles.doneText}>Done</Text>
+    <View style={[styles.rowWrapper, { paddingRight: DEPTH, paddingBottom: DEPTH }]}>
+      <View style={[styles.rowShadow, { backgroundColor: priorityColor + '55' }]} />
+      <View style={[styles.row, { borderColor: priorityColor }]}>
+        <View style={[styles.priorityBar, { backgroundColor: priorityColor }]} />
+        <View style={styles.rowContent}>
+          <Text style={styles.taskTitle} numberOfLines={1}>
+            {task.title}
+          </Text>
+          <Text style={styles.rowMeta}>
+            {task.completedAt ? formatDate(task.completedAt) : 'Unknown'} ·{' '}
+            {task.sourceApp.split('.').pop()}
+          </Text>
+        </View>
+        <View style={styles.doneBadge}>
+          <Text style={styles.doneText}>DONE</Text>
+        </View>
       </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.backgroundLight,
-  },
+  container: { flex: 1, backgroundColor: Colors.backgroundLight },
   filterRow: {
     flexDirection: 'row',
     gap: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: Colors.surfaceLight,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.outlineLight,
+    backgroundColor: Colors.primary900,
+    borderBottomWidth: 2,
+    borderBottomColor: Colors.black,
   },
   chip: {
     paddingHorizontal: 14,
     paddingVertical: 6,
-    borderRadius: 16,
-    backgroundColor: Colors.surfaceVariantLight,
-    borderWidth: 1,
-    borderColor: Colors.outlineLight,
+    borderRadius: 2,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.4)',
   },
   chipActive: {
-    backgroundColor: Colors.primary500,
-    borderColor: Colors.primary500,
+    backgroundColor: Colors.white,
+    borderColor: Colors.white,
   },
-  chipText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: Colors.onSurfaceVariantLight,
-  },
-  chipTextActive: {
-    color: Colors.white,
-  },
-  statsCard: {
+  chipText: { fontSize: 12, fontWeight: '700', color: 'rgba(255,255,255,0.7)' },
+  chipTextActive: { color: Colors.primary900 },
+  statsWrapper: {
     marginHorizontal: 16,
     marginTop: 12,
-    padding: 14,
-    backgroundColor: Colors.surfaceLight,
-    borderRadius: 8,
-    elevation: 1,
+    position: 'relative',
   },
-  statsRow: {
-    marginBottom: 8,
+  statsShadow: {
+    position: 'absolute',
+    top: DEPTH,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: Colors.neoShadowDefault,
+    borderRadius: 2,
+  },
+  statsCard: {
+    backgroundColor: Colors.surfaceLight,
+    borderWidth: 2,
+    borderColor: Colors.primary900,
+    borderRadius: 2,
+    padding: 14,
   },
   statsTotal: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: '800',
     color: Colors.onSurfaceLight,
+    marginBottom: 8,
+    letterSpacing: 0.2,
   },
-  breakdownRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  breakdownItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  breakdownDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  breakdownLabel: {
-    fontSize: 12,
-    color: Colors.onSurfaceVariantLight,
-  },
-  list: {
-    paddingBottom: 16,
-    paddingTop: 4,
-  },
-  emptyContainer: {
-    flex: 1,
+  breakdownRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  breakdownItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  breakdownDot: { width: 8, height: 8, borderRadius: 2 },
+  breakdownLabel: { fontSize: 12, color: Colors.onSurfaceVariantLight, fontWeight: '500' },
+  list: { paddingTop: 8, paddingBottom: 16 },
+  emptyContainer: { flex: 1 },
+  rowWrapper: { marginHorizontal: 16, marginVertical: 4, position: 'relative' },
+  rowShadow: {
+    position: 'absolute',
+    top: DEPTH,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 2,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: Colors.surfaceLight,
-    marginHorizontal: 16,
-    marginVertical: 3,
-    borderRadius: 8,
-    padding: 12,
-    gap: 12,
+    borderWidth: 2,
+    borderRadius: 2,
+    overflow: 'hidden',
   },
-  priorityDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  rowContent: {
-    flex: 1,
-  },
+  priorityBar: { width: 4, alignSelf: 'stretch' },
+  rowContent: { flex: 1, paddingHorizontal: 12, paddingVertical: 10 },
   taskTitle: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
     color: Colors.onSurfaceVariantLight,
     textDecorationLine: 'line-through',
     marginBottom: 2,
   },
-  rowMeta: {
-    fontSize: 11,
-    color: Colors.onSurfaceVariantLight,
-  },
+  rowMeta: { fontSize: 11, color: Colors.onSurfaceVariantLight },
   doneBadge: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    marginRight: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 2,
+    borderWidth: 1.5,
+    borderColor: Colors.success,
     backgroundColor: Colors.successBg,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  doneText: {
-    fontSize: 14,
-    color: Colors.success,
-    fontWeight: '700',
-  },
+  doneText: { fontSize: 10, fontWeight: '800', color: Colors.success, letterSpacing: 0.5 },
 });

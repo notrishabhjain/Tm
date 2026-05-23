@@ -9,18 +9,24 @@ export default function EmailReportScreen(): React.JSX.Element {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backText}>‹ Settings</Text>
+        <Pressable onPress={() => router.back()} style={styles.backBtn} accessibilityRole="button">
+          <Text style={styles.backText}>Back</Text>
         </Pressable>
         <Text style={styles.title}>Daily Email Report</Text>
-        <View style={{ width: 70 }} />
+        <View style={{ width: 56 }} />
       </View>
 
       <View style={styles.content}>
-        <Text style={styles.description}>
-          Configure a daily email summary of your task activity. Requires SMTP server credentials.
-        </Text>
-        <Text style={styles.comingSoon}>Email reports — Sprint 4 feature</Text>
+        <View style={styles.card}>
+          <View style={styles.statusRow}>
+            <Text style={styles.statusLabel}>STATUS</Text>
+            <Text style={styles.statusValue}>Not configured</Text>
+          </View>
+          <Text style={styles.description}>
+            Daily email digests summarise your completed and pending tasks. This feature requires
+            SMTP server credentials and is not yet available.
+          </Text>
+        </View>
       </View>
     </View>
   );
@@ -32,20 +38,48 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    backgroundColor: Colors.primary900,
+    borderBottomWidth: 2,
+    borderBottomColor: Colors.black,
+  },
+  backBtn: { padding: 4, minWidth: 56 },
+  backText: { fontSize: 15, color: Colors.white, fontWeight: '600' },
+  title: { fontSize: 17, fontWeight: '800', color: Colors.white },
+  content: { flex: 1, padding: 16 },
+  card: {
+    marginTop: 8,
     backgroundColor: Colors.surfaceLight,
+    borderWidth: 2,
+    borderColor: Colors.outlineLight,
+    borderRadius: 2,
+    padding: 16,
+  },
+  statusRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+    paddingBottom: 12,
     borderBottomWidth: 1,
     borderBottomColor: Colors.outlineLight,
   },
-  backButton: { padding: 4 },
-  backText: { fontSize: 16, color: Colors.primary500, fontWeight: '600' },
-  title: { fontSize: 17, fontWeight: '700', color: Colors.onSurfaceLight },
-  content: { flex: 1, padding: 24, justifyContent: 'center', alignItems: 'center' },
-  description: {
-    fontSize: 15,
+  statusLabel: {
+    fontSize: 11,
+    fontWeight: '800',
     color: Colors.onSurfaceVariantLight,
-    textAlign: 'center',
-    marginBottom: 24,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
   },
-  comingSoon: { fontSize: 13, color: Colors.primary300, fontStyle: 'italic' },
+  statusValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.onSurfaceVariantLight,
+  },
+  description: {
+    fontSize: 13,
+    color: Colors.onSurfaceVariantLight,
+    lineHeight: 20,
+  },
 });

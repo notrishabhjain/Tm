@@ -7,6 +7,8 @@ import { Button } from '@/ui/components/Button';
 import { setSetting } from '@/data/storage/settings';
 import NotificationListener from '../../../modules/notification-listener/src';
 
+const DEPTH = 4;
+
 export default function OnboardingDoneScreen(): React.JSX.Element {
   const router = useRouter();
   const insets = useSafeAreaInsets();
@@ -26,24 +28,40 @@ export default function OnboardingDoneScreen(): React.JSX.Element {
       style={[styles.container, { paddingTop: insets.top + 32, paddingBottom: insets.bottom + 24 }]}
     >
       <View style={styles.content}>
-        <View style={styles.checkCircle}>
-          <View style={styles.checkFill} />
+        <View style={[styles.checkWrapper, { paddingRight: DEPTH, paddingBottom: DEPTH }]}>
+          <View style={[styles.checkShadow, { backgroundColor: 'rgba(255,255,255,0.2)' }]} />
+          <View style={styles.checkCard}>
+            <View style={styles.checkFill} />
+          </View>
         </View>
-        <Text style={styles.title}>You're all set!</Text>
+
+        <Text style={styles.title}>All set.</Text>
         <Text style={styles.description}>
           TaskMind is now monitoring your selected apps. Actionable messages will automatically
           appear as tasks on your home screen.
         </Text>
 
-        <View style={styles.reminderCard}>
-          <Text style={styles.reminderTitle}>Remember</Text>
-          <Text style={styles.reminderItem}>• No snooze. No "later". Just act on tasks.</Text>
-          <Text style={styles.reminderItem}>
-            • Check Settings → Diagnostics if something isn't working.
-          </Text>
-          <Text style={styles.reminderItem}>
-            • For battery optimization: Settings → Device → Battery Guide.
-          </Text>
+        <View style={[styles.reminderWrapper, { paddingRight: DEPTH, paddingBottom: DEPTH }]}>
+          <View style={[styles.reminderShadow, { backgroundColor: 'rgba(255,255,255,0.15)' }]} />
+          <View style={styles.reminderCard}>
+            <Text style={styles.reminderTitle}>Remember</Text>
+            <View style={styles.reminderItem}>
+              <View style={styles.bullet} />
+              <Text style={styles.reminderText}>No snooze. No "later". Just act on tasks.</Text>
+            </View>
+            <View style={styles.reminderItem}>
+              <View style={styles.bullet} />
+              <Text style={styles.reminderText}>
+                Check Settings → Diagnostics if something is not working.
+              </Text>
+            </View>
+            <View style={styles.reminderItem}>
+              <View style={styles.bullet} />
+              <Text style={styles.reminderText}>
+                For battery optimization: Settings → Device → Battery Guide.
+              </Text>
+            </View>
+          </View>
         </View>
       </View>
 
@@ -61,39 +79,71 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
     justifyContent: 'space-between',
   },
-  content: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  checkCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+  content: { flex: 1, justifyContent: 'center', gap: 24 },
+  checkWrapper: { position: 'relative', alignSelf: 'flex-start' },
+  checkShadow: {
+    position: 'absolute',
+    top: DEPTH,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 2,
+  },
+  checkCard: {
+    width: 56,
+    height: 56,
+    borderRadius: 2,
     backgroundColor: Colors.success,
+    borderWidth: 2,
+    borderColor: 'rgba(255,255,255,0.4)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
   },
-  checkFill: { width: 24, height: 24, borderRadius: 12, backgroundColor: Colors.white },
+  checkFill: { width: 20, height: 20, borderRadius: 2, backgroundColor: Colors.white },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
+    fontSize: 36,
+    fontWeight: '800',
     color: Colors.white,
-    marginBottom: 16,
-    textAlign: 'center',
+    letterSpacing: -0.5,
   },
   description: {
-    fontSize: 16,
-    color: Colors.primary300,
-    lineHeight: 26,
-    textAlign: 'center',
-    marginBottom: 32,
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.65)',
+    lineHeight: 24,
+  },
+  reminderWrapper: { position: 'relative' },
+  reminderShadow: {
+    position: 'absolute',
+    top: DEPTH,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: 2,
   },
   reminderCard: {
     backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 12,
-    padding: 20,
-    alignSelf: 'stretch',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.2)',
+    borderRadius: 2,
+    padding: 16,
     gap: 10,
   },
-  reminderTitle: { fontSize: 14, fontWeight: '700', color: Colors.primary100, marginBottom: 4 },
-  reminderItem: { fontSize: 13, color: Colors.primary300, lineHeight: 20 },
+  reminderTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: 'rgba(255,255,255,0.5)',
+    textTransform: 'uppercase',
+    letterSpacing: 1.2,
+    marginBottom: 4,
+  },
+  reminderItem: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  bullet: {
+    width: 6,
+    height: 6,
+    borderRadius: 1,
+    backgroundColor: Colors.urgentFg,
+    marginTop: 5,
+  },
+  reminderText: { flex: 1, fontSize: 13, color: 'rgba(255,255,255,0.65)', lineHeight: 20 },
   footer: {},
 });
