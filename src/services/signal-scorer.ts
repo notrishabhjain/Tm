@@ -850,6 +850,39 @@ function evalNegativeSignals(
   }
 }
 
+// ── Per-app signal profile ────────────────────────────────────────────────────
+// Different apps have different noise floors. Formal channels (Gmail, Outlook)
+// lean task-heavy; social/messaging apps are noisy. Group chats add extra noise.
+
+function appScoreModifier(packageName: string, isGroup: boolean): number {
+  const groupPenalty = isGroup ? -0.05 : 0;
+  switch (packageName) {
+    case 'com.google.android.gm': // Gmail — formal work email
+    case 'com.microsoft.outlook':
+    case 'com.microsoft.exchange.mowa': // Outlook mobile
+      return 0.08;
+    case 'com.Slack': // Slack — work context
+    case 'com.microsoft.teams':
+    case 'com.microsoft.skype.teams':
+      return 0.05;
+    case 'com.whatsapp': // WhatsApp — high volume, conversational
+    case 'org.telegram.messenger':
+    case 'org.thoughtcrime.securesms': // Signal
+      return -0.05 + groupPenalty;
+    case 'com.android.mms': // SMS — often transactional/OTP
+    case 'com.google.android.apps.messaging':
+      return -0.1;
+    case 'com.linkedin.android': // Social / news feeds — low task density
+    case 'com.instagram.android':
+    case 'com.facebook.katana':
+    case 'com.twitter.android':
+    case 'com.snapchat.android':
+      return -0.15;
+    default:
+      return 0;
+  }
+}
+
 // ── Always inbox (force CONFIRM) ─────────────────────────────────────────────
 
 function checkForceInbox(
@@ -911,6 +944,11 @@ export async function scoreNotification(notification: NotificationData): Promise
   evalPositiveSignals(acc, latestMessage, fullText, senderInfo.tier, activeKws, hasThreadCtx);
   evalNegativeSignals(acc, latestMessage, activeKws);
   applyLengthPrior(acc, latestMessage);
+
+  const appMod = appScoreModifier(notification.packageName, notification.isGroup ?? false);
+  if (appMod !== 0) {
+    applySignal(acc, appMod > 0 ? 'app_profile_boost' : 'app_profile_penalty', appMod);
+  }
 
   const rawScore = Math.max(0, Math.min(1, acc.score));
   const forceInbox = checkForceInbox(latestMessage, acc.signals, senderInfo.effectiveTrust);
