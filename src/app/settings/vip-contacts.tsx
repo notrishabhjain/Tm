@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, ScrollView, StyleSheet, Alert } from 
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Colors } from '@/ui/theme/colors';
+import { useTheme } from '@/ui/theme';
 import { db } from '@/data/db/client';
 import { VipContactRepository } from '@/data/repositories/VipContactRepository';
 import { ContactPickerModal } from '@/ui/components/ContactPickerModal';
@@ -11,6 +12,7 @@ const repo = new VipContactRepository(db);
 const DEPTH = 4;
 
 export default function VipContactsScreen(): React.JSX.Element {
+  const theme = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
@@ -80,7 +82,7 @@ export default function VipContactsScreen(): React.JSX.Element {
               value={name}
               onChangeText={setName}
               placeholder="e.g. Ravi Sharma"
-              placeholderTextColor={Colors.onSurfaceVariantLight}
+              placeholderTextColor={theme.onSurfaceVariant}
               onSubmitEditing={handleAdd}
               returnKeyType="done"
             />

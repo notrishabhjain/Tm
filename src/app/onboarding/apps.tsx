@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet, Switch } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/ui/theme/colors';
+import { useTheme } from '@/ui/theme';
 import { Button } from '@/ui/components/Button';
 import { db, initializeDatabase } from '@/data/db/client';
 import { MonitoredAppRepository } from '@/data/repositories/MonitoredAppRepository';
@@ -38,6 +39,7 @@ const DEFAULT_SELECTED = new Set([
 const DEPTH = 4;
 
 export default function OnboardingAppsScreen(): React.JSX.Element {
+  const theme = useTheme();
   const router = useRouter();
   const [apps, setApps] = useState<AppEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -127,7 +129,7 @@ export default function OnboardingAppsScreen(): React.JSX.Element {
         <Switch
           value={allSelected}
           onValueChange={toggleAll}
-          trackColor={{ true: Colors.primary900, false: Colors.outlineLight }}
+          trackColor={{ true: Colors.primary900, false: theme.outline }}
           thumbColor={Colors.white}
         />
       </View>

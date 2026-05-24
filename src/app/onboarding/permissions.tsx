@@ -3,12 +3,14 @@ import { View, Text, StyleSheet, AppState } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '@/ui/theme/colors';
+import { useTheme } from '@/ui/theme';
 import { Button } from '@/ui/components/Button';
 import NotificationListener from '../../../modules/notification-listener/src';
 
 const DEPTH = 4;
 
 export default function OnboardingPermissionsScreen(): React.JSX.Element {
+  const theme = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [status, setStatus] = useState<'granted' | 'denied' | 'unknown'>('unknown');
@@ -40,7 +42,14 @@ export default function OnboardingPermissionsScreen(): React.JSX.Element {
 
   return (
     <View
-      style={[styles.container, { paddingTop: insets.top + 24, paddingBottom: insets.bottom + 24 }]}
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.background,
+          paddingTop: insets.top + 24,
+          paddingBottom: insets.bottom + 24,
+        },
+      ]}
     >
       <View style={styles.content}>
         <Text style={styles.stepLabel}>STEP 1 OF 4</Text>

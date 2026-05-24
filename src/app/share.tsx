@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors, getPriorityColor } from '@/ui/theme/colors';
+import { useTheme } from '@/ui/theme';
 import { Button } from '@/ui/components/Button';
 import { PriorityChip } from '@/ui/components/PriorityChip';
 import { db } from '@/data/db/client';
@@ -84,6 +85,7 @@ function formatDueDate(ts: number): string {
 }
 
 export default function ShareScreen(): React.JSX.Element {
+  const theme = useTheme();
   const router = useRouter();
 
   const [parsed, setParsed] = useState<ParsedShare | null>(null);
@@ -222,7 +224,7 @@ export default function ShareScreen(): React.JSX.Element {
           onChangeText={setTitle}
           multiline
           placeholder="Describe the task…"
-          placeholderTextColor={Colors.onSurfaceVariantLight}
+          placeholderTextColor={theme.onSurfaceVariant}
           autoFocus
         />
 

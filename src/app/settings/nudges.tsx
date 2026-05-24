@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/ui/theme/colors';
+import { useTheme } from '@/ui/theme';
 import { getSetting, setSetting } from '@/data/storage/settings';
 import { scheduleNudge, cancelNudge } from '@/services/nudge-scheduler';
 
@@ -30,6 +31,7 @@ function isValidTime(t: string): boolean {
 }
 
 export default function NudgesScreen(): React.JSX.Element {
+  const theme = useTheme();
   const router = useRouter();
   const [frequencyMinutes, setFrequencyMinutes] = useState<number>(
     getSetting('nudge_freq_minutes')
@@ -139,7 +141,7 @@ export default function NudgesScreen(): React.JSX.Element {
                     value={quietStart}
                     onChangeText={setQuietStart}
                     placeholder="22:00"
-                    placeholderTextColor={Colors.onSurfaceVariantLight}
+                    placeholderTextColor={theme.onSurfaceVariant}
                     keyboardType="numbers-and-punctuation"
                     maxLength={5}
                     editable={quietEnabled}
@@ -162,7 +164,7 @@ export default function NudgesScreen(): React.JSX.Element {
                     value={quietEnd}
                     onChangeText={setQuietEnd}
                     placeholder="07:00"
-                    placeholderTextColor={Colors.onSurfaceVariantLight}
+                    placeholderTextColor={theme.onSurfaceVariant}
                     keyboardType="numbers-and-punctuation"
                     maxLength={5}
                     editable={quietEnabled}
@@ -198,7 +200,7 @@ export default function NudgesScreen(): React.JSX.Element {
               <Switch
                 value={urgentOverride}
                 onValueChange={handleUrgentOverride}
-                trackColor={{ true: Colors.primary900, false: Colors.outlineLight }}
+                trackColor={{ true: Colors.primary900, false: theme.outline }}
                 thumbColor={Colors.white}
               />
             </View>

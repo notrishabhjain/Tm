@@ -3,6 +3,7 @@ import { View, Text, TextInput, StyleSheet, Pressable, ScrollView } from 'react-
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '@/ui/theme/colors';
+import { useTheme } from '@/ui/theme';
 import { Button } from '@/ui/components/Button';
 import { ContactPickerModal } from '@/ui/components/ContactPickerModal';
 import { db, initializeDatabase } from '@/data/db/client';
@@ -11,6 +12,7 @@ import { VipContactRepository } from '@/data/repositories/VipContactRepository';
 const DEPTH = 4;
 
 export default function OnboardingVipScreen(): React.JSX.Element {
+  const theme = useTheme();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const [name, setName] = useState('');
@@ -53,7 +55,7 @@ export default function OnboardingVipScreen(): React.JSX.Element {
               value={name}
               onChangeText={setName}
               placeholder="e.g. Ravi Sharma"
-              placeholderTextColor={Colors.onSurfaceVariantLight}
+              placeholderTextColor={theme.onSurfaceVariant}
               onSubmitEditing={addVip}
               returnKeyType="done"
             />

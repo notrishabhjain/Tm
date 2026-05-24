@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { gt, sql, eq } from 'drizzle-orm';
 import { Colors } from '@/ui/theme/colors';
+import { useTheme } from '@/ui/theme';
 import { db } from '@/data/db/client';
 import { trainingLog, discardedLog, tasks, senderStats, learnedKeywords } from '@/data/db/schema';
 
@@ -86,6 +87,7 @@ const TIER_LABELS: Record<string, string> = {
 };
 
 export default function AnalyticsScreen(): React.JSX.Element {
+  const theme = useTheme();
   const router = useRouter();
 
   const { data: decisions } = useQuery({
@@ -162,7 +164,7 @@ export default function AnalyticsScreen(): React.JSX.Element {
             <NeoCard>
               <BreakdownBar label="AUTO-CREATE" pct={autoCreatePct} color={Colors.success} />
               <BreakdownBar label="CONFIRM" pct={confirmPct} color={Colors.highFg} />
-              <BreakdownBar label="DISCARD" pct={discardPct} color={Colors.onSurfaceVariantLight} />
+              <BreakdownBar label="DISCARD" pct={discardPct} color={theme.onSurfaceVariant} />
             </NeoCard>
           </>
         )}
@@ -201,7 +203,7 @@ export default function AnalyticsScreen(): React.JSX.Element {
                   key={r.reason}
                   label={r.reason.replace(/_/g, ' ')}
                   value={r.count}
-                  color={Colors.onSurfaceVariantLight}
+                  color={theme.onSurfaceVariant}
                   border={i > 0}
                 />
               ))}

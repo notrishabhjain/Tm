@@ -2,6 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/ui/theme/colors';
+import { useTheme } from '@/ui/theme';
 import { Button } from '@/ui/components/Button';
 
 const LEVELS = [
@@ -34,10 +35,11 @@ const LEVELS = [
 const DEPTH = 4;
 
 export default function OnboardingPriorityScreen(): React.JSX.Element {
+  const theme = useTheme();
   const router = useRouter();
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: theme.background }]}>
       <View style={styles.content}>
         <Text style={styles.stepLabel}>STEP 4 OF 5</Text>
         <Text style={styles.title}>How Priorities Work</Text>

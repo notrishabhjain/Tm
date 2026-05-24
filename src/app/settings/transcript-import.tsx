@@ -13,6 +13,7 @@ import {
 import { useRouter } from 'expo-router';
 import * as Clipboard from 'expo-clipboard';
 import { Colors, getPriorityColor } from '@/ui/theme/colors';
+import { useTheme } from '@/ui/theme';
 import { Button } from '@/ui/components/Button';
 import { PriorityChip } from '@/ui/components/PriorityChip';
 import { runExtractionPipeline } from '@/domain/extraction';
@@ -56,6 +57,7 @@ const MAX_SENTENCES = 150;
 const DEPTH = 4;
 
 export default function TranscriptImportScreen(): React.JSX.Element {
+  const theme = useTheme();
   const router = useRouter();
   const [rawText, setRawText] = useState('');
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -242,7 +244,7 @@ export default function TranscriptImportScreen(): React.JSX.Element {
               onChangeText={setRawText}
               multiline
               placeholder="Paste your text here..."
-              placeholderTextColor={Colors.onSurfaceVariantLight}
+              placeholderTextColor={theme.onSurfaceVariant}
               textAlignVertical="top"
             />
             {rawText.length > 0 && <Text style={styles.charCount}>{rawText.length} chars</Text>}
@@ -283,6 +285,7 @@ function CandidateRow({
   candidate: Candidate;
   onToggle: () => void;
 }): React.JSX.Element {
+  const theme = useTheme();
   const priorityColor = getPriorityColor(candidate.priority);
 
   return (
@@ -290,7 +293,7 @@ function CandidateRow({
       <View
         style={[
           styles.candidateShadow,
-          { backgroundColor: candidate.selected ? Colors.neoShadowDefault : Colors.outlineLight },
+          { backgroundColor: candidate.selected ? Colors.neoShadowDefault : theme.outline },
         ]}
       />
       <Pressable

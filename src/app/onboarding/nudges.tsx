@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, Pressable, Switch, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/ui/theme/colors';
+import { useTheme } from '@/ui/theme';
 import { Button } from '@/ui/components/Button';
 import { setSetting } from '@/data/storage/settings';
 
@@ -16,6 +17,7 @@ const FREQUENCY_OPTIONS = [
 const DEPTH = 4;
 
 export default function OnboardingNudgesScreen(): React.JSX.Element {
+  const theme = useTheme();
   const router = useRouter();
   const [frequencyMinutes, setFrequencyMinutes] = useState<number>(60);
   const [urgentOverride, setUrgentOverride] = useState<boolean>(true);
@@ -82,7 +84,7 @@ export default function OnboardingNudgesScreen(): React.JSX.Element {
               <Switch
                 value={urgentOverride}
                 onValueChange={setUrgentOverride}
-                trackColor={{ true: Colors.primary900, false: Colors.outlineLight }}
+                trackColor={{ true: Colors.primary900, false: theme.outline }}
                 thumbColor={Colors.white}
               />
             </View>

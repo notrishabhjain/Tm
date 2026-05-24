@@ -3,6 +3,7 @@ import { View, Text, ScrollView, Switch, Pressable, StyleSheet, Alert } from 're
 import { useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Colors } from '@/ui/theme/colors';
+import { useTheme } from '@/ui/theme';
 import { db } from '@/data/db/client';
 import { MonitoredAppRepository } from '@/data/repositories/MonitoredAppRepository';
 import NotificationListener from '../../../modules/notification-listener/src';
@@ -24,6 +25,7 @@ const COMMON_APPS = [
 ];
 
 export default function MonitoredAppsScreen(): React.JSX.Element {
+  const theme = useTheme();
   const router = useRouter();
   const queryClient = useQueryClient();
 
@@ -110,7 +112,7 @@ export default function MonitoredAppsScreen(): React.JSX.Element {
                   <Switch
                     value={isActive}
                     onValueChange={(v) => handleToggle(app.packageName, app.displayName, v)}
-                    trackColor={{ true: Colors.primary900, false: Colors.outlineLight }}
+                    trackColor={{ true: Colors.primary900, false: theme.outline }}
                     thumbColor={Colors.white}
                   />
                 </View>
@@ -141,7 +143,7 @@ export default function MonitoredAppsScreen(): React.JSX.Element {
                         onValueChange={(v) =>
                           toggleMutation.mutate({ packageName: app.packageName, isActive: v })
                         }
-                        trackColor={{ true: Colors.primary900, false: Colors.outlineLight }}
+                        trackColor={{ true: Colors.primary900, false: theme.outline }}
                         thumbColor={Colors.white}
                       />
                     </View>
