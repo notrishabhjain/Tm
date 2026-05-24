@@ -132,11 +132,17 @@ export function ContactPickerModal({
             keyboardShouldPersistTaps="handled"
             renderItem={({ item }) => (
               <Pressable
-                style={({ pressed }) => [styles.contactRow, pressed && styles.contactRowPressed]}
+                style={({ pressed }) => [
+                  styles.contactRow,
+                  pressed && styles.contactRowPressed,
+                  pressed && { backgroundColor: theme.pressHighlight },
+                ]}
                 onPress={() => handleSelect(item)}
               >
                 <View style={styles.avatar}>
-                  <Text style={styles.avatarLetter}>{item[0]?.toUpperCase() ?? '?'}</Text>
+                  <Text style={[styles.avatarLetter, { color: theme.primary }]}>
+                    {item[0]?.toUpperCase() ?? '?'}
+                  </Text>
                 </View>
                 <Text style={styles.contactName}>{item}</Text>
                 <Text style={styles.addIcon}>+</Text>
@@ -198,7 +204,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceLight,
     gap: 12,
   },
-  contactRowPressed: { backgroundColor: Colors.primary50 },
+  contactRowPressed: {},
   avatar: {
     width: 38,
     height: 38,
