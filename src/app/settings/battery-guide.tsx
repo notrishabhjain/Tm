@@ -51,7 +51,7 @@ export default function BatteryGuideScreen(): React.JSX.Element {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.intro}>
+        <Text style={[styles.intro, { color: theme.onSurfaceVariant }]}>
           Some Android manufacturers aggressively kill background services. Follow the steps for
           your device manufacturer to ensure TaskMind keeps running.
         </Text>
@@ -76,7 +76,12 @@ export default function BatteryGuideScreen(): React.JSX.Element {
 
         <View style={[styles.tipWrapper, { paddingRight: DEPTH, paddingBottom: DEPTH }]}>
           <View style={[styles.cardShadow, { backgroundColor: Colors.neoShadowMedium }]} />
-          <View style={[styles.tipCard, { borderColor: Colors.mediumFg, backgroundColor: theme.mediumBg }]}>
+          <View
+            style={[
+              styles.tipCard,
+              { borderColor: Colors.mediumFg, backgroundColor: theme.mediumBg },
+            ]}
+          >
             <Text style={styles.tipTitle}>After making changes</Text>
             <Text style={[styles.tipText, { color: theme.onSurface }]}>
               Reboot your device, then check Settings → Diagnostics → System to verify the
@@ -117,7 +122,6 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   card: {
-    backgroundColor: Colors.surfaceLight,
     borderWidth: 2,
     borderColor: Colors.primary900,
     borderRadius: 2,
@@ -126,15 +130,14 @@ const styles = StyleSheet.create({
   },
   manufacturer: { fontSize: 14, fontWeight: '800', color: Colors.primary900, marginBottom: 4 },
   stepRow: { flexDirection: 'row', gap: 8 },
-  stepNum: { fontSize: 12, fontWeight: '700', color: Colors.onSurfaceVariantLight, minWidth: 16 },
-  stepText: { fontSize: 12, color: Colors.onSurfaceLight, flex: 1, lineHeight: 18 },
+  stepNum: { fontSize: 12, fontWeight: '700', minWidth: 16 },
+  stepText: { fontSize: 12, flex: 1, lineHeight: 18 },
   tipWrapper: { position: 'relative' },
   tipCard: {
-    backgroundColor: Colors.mediumBgLight,
     borderWidth: 2,
     borderRadius: 2,
     padding: 14,
   },
   tipTitle: { fontSize: 13, fontWeight: '700', color: Colors.primary900, marginBottom: 6 },
-  tipText: { fontSize: 13, color: Colors.onSurfaceLight, lineHeight: 19 },
+  tipText: { fontSize: 13, lineHeight: 19 },
 });
