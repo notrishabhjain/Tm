@@ -91,6 +91,7 @@ export default function DiagnosticsScreen(): React.JSX.Element {
                 styles.tabText,
                 { color: theme.onSurfaceVariant },
                 activeTab === tab && styles.tabTextActive,
+                activeTab === tab && { color: theme.primary },
               ]}
             >
               {tab}
@@ -585,7 +586,7 @@ const styles = StyleSheet.create({
   },
   tabActive: { borderBottomColor: Colors.primary900 },
   tabText: { fontSize: 12, fontWeight: '600' },
-  tabTextActive: { color: Colors.primary900, fontWeight: '800' },
+  tabTextActive: { fontWeight: '800' },
   content: { flex: 1 },
   emptyTab: { padding: 32, alignItems: 'center' },
   emptyText: {
@@ -612,7 +613,7 @@ const styles = StyleSheet.create({
   logTitle: { fontSize: 12, fontWeight: '700', marginBottom: 2 },
   logBody: { fontSize: 11, marginBottom: 2 },
   logMeta: { fontSize: 11 },
-  logKeywords: { fontSize: 11, color: Colors.primary900, marginTop: 2, fontWeight: '600' },
+  logKeywords: { fontSize: 11, marginTop: 2, fontWeight: '600' },
   discardedRow: {
     flexDirection: 'row',
     alignItems: 'center',

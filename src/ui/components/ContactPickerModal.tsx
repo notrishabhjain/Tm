@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Contacts from 'expo-contacts';
 import { Colors } from '@/ui/theme/colors';
+import { useTheme } from '@/ui/theme';
 
 interface Props {
   visible: boolean;
@@ -28,6 +29,7 @@ export function ContactPickerModal({
   existingNames,
 }: Props): React.JSX.Element {
   const insets = useSafeAreaInsets();
+  const theme = useTheme();
   const [allContacts, setAllContacts] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(false);
@@ -205,7 +207,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  avatarLetter: { fontSize: 15, fontWeight: '700', color: Colors.primary900 },
+  avatarLetter: { fontSize: 15, fontWeight: '700' },
   contactName: { flex: 1, fontSize: 15, color: Colors.onSurfaceLight },
   addIcon: { fontSize: 22, color: Colors.primary500, fontWeight: '700' },
   separator: { height: 1, backgroundColor: Colors.outlineLight, marginLeft: 66 },
