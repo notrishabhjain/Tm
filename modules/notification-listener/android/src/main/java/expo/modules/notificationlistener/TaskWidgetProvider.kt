@@ -113,7 +113,7 @@ class TaskWidgetProvider : AppWidgetProvider() {
         }
 
         fun readPendingTasks(context: Context): List<WidgetTask> {
-            val dbPath = context.getDatabasePath("tm.db").absolutePath
+            val dbPath = context.getDatabasePath("taskmind.db").absolutePath
             return try {
                 SQLiteDatabase.openDatabase(dbPath, null, SQLiteDatabase.OPEN_READONLY).use { db ->
                     val cursor = db.rawQuery(
