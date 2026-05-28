@@ -146,6 +146,9 @@ export function initializeDatabase(): void {
     'ALTER TABLE tasks ADD COLUMN screenshot_path TEXT;',
     "ALTER TABLE sender_stats ADD COLUMN tier TEXT NOT NULL DEFAULT 'UNKNOWN';",
     'ALTER TABLE sender_stats ADD COLUMN seed_trust REAL;',
+    'ALTER TABLE tasks ADD COLUMN notification_key TEXT;',
+    'CREATE UNIQUE INDEX IF NOT EXISTS idx_tasks_notification_key ON tasks(notification_key) WHERE notification_key IS NOT NULL;',
+    'ALTER TABLE discarded_log ADD COLUMN notification_key TEXT;',
   ];
   for (const sql of columnMigrations) {
     try {
