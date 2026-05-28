@@ -125,7 +125,9 @@ export async function handleNotification(taskData: {
       const taskRepo2 = new TaskRepository(db);
       const messageText2 = notification.bigText || notification.text || notification.title;
       if (aiResult.isTask) {
-        const title2 = aiResult.title ?? extractTitle(messageText2, notification.title ?? '', notification.packageName);
+        const title2 =
+          aiResult.title ??
+          extractTitle(messageText2, notification.title ?? '', notification.packageName);
         await taskRepo2.createTask({
           title: title2,
           body: notification.bigText || notification.text,

@@ -23,7 +23,9 @@ function isPastDigestTime(): boolean {
   }
 }
 
-async function fetchDigestText(tasks: { title: string; priority: string }[]): Promise<string | null> {
+async function fetchDigestText(
+  tasks: { title: string; priority: string }[]
+): Promise<string | null> {
   const apiKey = getSetting('ai_api_key');
   const model = getSetting('ai_model');
   if (!apiKey || tasks.length === 0) return null;

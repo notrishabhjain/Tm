@@ -89,7 +89,10 @@ export default function AiCloudScreen(): React.JSX.Element {
     setTestResult(null);
     const result = await testConnection(key, model);
     setTesting(false);
-    setTestResult({ ok: result.ok, msg: result.ok ? 'Connected successfully.' : (result.error ?? 'Connection failed.') });
+    setTestResult({
+      ok: result.ok,
+      msg: result.ok ? 'Connected successfully.' : (result.error ?? 'Connection failed.'),
+    });
   }, [apiKey, model]);
 
   return (
@@ -103,7 +106,6 @@ export default function AiCloudScreen(): React.JSX.Element {
       </View>
 
       <ScrollView contentContainerStyle={styles.content}>
-
         {/* Privacy disclosure */}
         <View style={[styles.disclosureCard, { borderColor: Colors.highFg }]}>
           <Text style={styles.disclosureTitle}>Data notice</Text>
@@ -117,7 +119,12 @@ export default function AiCloudScreen(): React.JSX.Element {
         {/* Enable toggle */}
         <View style={[styles.sectionWrapper, { paddingRight: DEPTH, paddingBottom: DEPTH }]}>
           <View style={styles.sectionShadow} />
-          <View style={[styles.sectionCard, { backgroundColor: theme.surface, borderColor: Colors.primary900 }]}>
+          <View
+            style={[
+              styles.sectionCard,
+              { backgroundColor: theme.surface, borderColor: Colors.primary900 },
+            ]}
+          >
             <View style={styles.row}>
               <View style={styles.rowText}>
                 <Text style={[styles.rowLabel, { color: theme.onSurface }]}>Enable Cloud AI</Text>
@@ -139,13 +146,25 @@ export default function AiCloudScreen(): React.JSX.Element {
         <Text style={[styles.sectionLabel, { color: theme.primary }]}>NVIDIA API KEY</Text>
         <View style={[styles.sectionWrapper, { paddingRight: DEPTH, paddingBottom: DEPTH }]}>
           <View style={styles.sectionShadow} />
-          <View style={[styles.sectionCard, { backgroundColor: theme.surface, borderColor: Colors.primary900 }]}>
+          <View
+            style={[
+              styles.sectionCard,
+              { backgroundColor: theme.surface, borderColor: Colors.primary900 },
+            ]}
+          >
             <Text style={[styles.hint, { color: theme.onSurfaceVariant }]}>
               Get a free key at build.nvidia.com → API Keys
             </Text>
             <View style={styles.keyRow}>
               <TextInput
-                style={[styles.keyInput, { color: theme.onSurface, borderColor: theme.outline, backgroundColor: theme.surfaceVariant }]}
+                style={[
+                  styles.keyInput,
+                  {
+                    color: theme.onSurface,
+                    borderColor: theme.outline,
+                    backgroundColor: theme.surfaceVariant,
+                  },
+                ]}
                 value={apiKey}
                 onChangeText={setApiKey}
                 placeholder="nvapi-…"
@@ -155,34 +174,59 @@ export default function AiCloudScreen(): React.JSX.Element {
                 autoCorrect={false}
               />
               <Pressable onPress={() => setShowKey((v) => !v)} style={styles.eyeBtn}>
-                <Text style={[styles.eyeText, { color: theme.onSurface }]}>{showKey ? 'Hide' : 'Show'}</Text>
+                <Text style={[styles.eyeText, { color: theme.onSurface }]}>
+                  {showKey ? 'Hide' : 'Show'}
+                </Text>
               </Pressable>
             </View>
             <View style={styles.keyActions}>
               <Pressable
                 onPress={handleKeySave}
-                style={[styles.btn, { backgroundColor: Colors.primary900, borderColor: Colors.primary900 }]}
+                style={[
+                  styles.btn,
+                  { backgroundColor: Colors.primary900, borderColor: Colors.primary900 },
+                ]}
                 accessibilityRole="button"
               >
                 <Text style={styles.btnTextLight}>Save key</Text>
               </Pressable>
               <Pressable
                 onPress={() => void handleTest()}
-                style={[styles.btn, { backgroundColor: theme.surfaceVariant, borderColor: theme.outline }]}
+                style={[
+                  styles.btn,
+                  { backgroundColor: theme.surfaceVariant, borderColor: theme.outline },
+                ]}
                 disabled={testing}
                 accessibilityRole="button"
               >
                 {testing ? (
                   <ActivityIndicator size="small" color={theme.onSurface} />
                 ) : (
-                  <Text style={[styles.btnTextDark, { color: theme.onSurface }]}>Test connection</Text>
+                  <Text style={[styles.btnTextDark, { color: theme.onSurface }]}>
+                    Test connection
+                  </Text>
                 )}
               </Pressable>
             </View>
             {testResult && (
-              <View style={[styles.testResult, { backgroundColor: testResult.ok ? '#E8F5E9' : '#FFF3F3', borderColor: testResult.ok ? Colors.success : Colors.urgentFg }]}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: testResult.ok ? Colors.success : Colors.urgentFg }}>
-                  {testResult.ok ? '✓ ' : '✗ '}{testResult.msg}
+              <View
+                style={[
+                  styles.testResult,
+                  {
+                    backgroundColor: testResult.ok ? '#E8F5E9' : '#FFF3F3',
+                    borderColor: testResult.ok ? Colors.success : Colors.urgentFg,
+                  },
+                ]}
+              >
+                <Text
+                  style={{
+                    fontSize: 12,
+                    fontWeight: '700',
+                    color: testResult.ok ? Colors.success : Colors.urgentFg,
+                  }}
+                >
+                  {testResult.ok ? '✓ ' : '✗ '}
+                  {testResult.msg}
                 </Text>
               </View>
             )}
@@ -193,7 +237,12 @@ export default function AiCloudScreen(): React.JSX.Element {
         <Text style={[styles.sectionLabel, { color: theme.primary }]}>MODEL</Text>
         <View style={[styles.sectionWrapper, { paddingRight: DEPTH, paddingBottom: DEPTH }]}>
           <View style={styles.sectionShadow} />
-          <View style={[styles.sectionCard, { backgroundColor: theme.surface, borderColor: Colors.primary900, padding: 0 }]}>
+          <View
+            style={[
+              styles.sectionCard,
+              { backgroundColor: theme.surface, borderColor: Colors.primary900, padding: 0 },
+            ]}
+          >
             {NVIDIA_MODELS.map((m, i) => (
               <Pressable
                 key={m.id}
@@ -207,7 +256,9 @@ export default function AiCloudScreen(): React.JSX.Element {
                 accessibilityState={{ selected: model === m.id }}
               >
                 <View style={[styles.radioCircle, { borderColor: Colors.primary900 }]}>
-                  {model === m.id && <View style={[styles.radioDot, { backgroundColor: Colors.primary900 }]} />}
+                  {model === m.id && (
+                    <View style={[styles.radioDot, { backgroundColor: Colors.primary900 }]} />
+                  )}
                 </View>
                 <Text style={[styles.modelLabel, { color: theme.onSurface }]}>{m.label}</Text>
               </Pressable>
@@ -219,7 +270,12 @@ export default function AiCloudScreen(): React.JSX.Element {
         <Text style={[styles.sectionLabel, { color: theme.primary }]}>DAILY DIGEST</Text>
         <View style={[styles.sectionWrapper, { paddingRight: DEPTH, paddingBottom: DEPTH }]}>
           <View style={styles.sectionShadow} />
-          <View style={[styles.sectionCard, { backgroundColor: theme.surface, borderColor: Colors.primary900 }]}>
+          <View
+            style={[
+              styles.sectionCard,
+              { backgroundColor: theme.surface, borderColor: Colors.primary900 },
+            ]}
+          >
             <View style={styles.row}>
               <View style={styles.rowText}>
                 <Text style={[styles.rowLabel, { color: theme.onSurface }]}>Morning briefing</Text>
@@ -236,9 +292,18 @@ export default function AiCloudScreen(): React.JSX.Element {
             </View>
             {digestEnabled && (
               <View style={styles.timeRow}>
-                <Text style={[styles.rowLabel, { color: theme.onSurface, flex: 1 }]}>Digest time</Text>
+                <Text style={[styles.rowLabel, { color: theme.onSurface, flex: 1 }]}>
+                  Digest time
+                </Text>
                 <TextInput
-                  style={[styles.timeInput, { color: theme.onSurface, borderColor: theme.outline, backgroundColor: theme.surfaceVariant }]}
+                  style={[
+                    styles.timeInput,
+                    {
+                      color: theme.onSurface,
+                      borderColor: theme.outline,
+                      backgroundColor: theme.surfaceVariant,
+                    },
+                  ]}
                   value={digestTime}
                   onChangeText={setDigestTime}
                   placeholder="09:00"
@@ -291,7 +356,13 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     backgroundColor: '#FFFBF0',
   },
-  disclosureTitle: { fontSize: 12, fontWeight: '800', color: Colors.highFg, marginBottom: 4, letterSpacing: 0.5 },
+  disclosureTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: Colors.highFg,
+    marginBottom: 4,
+    letterSpacing: 0.5,
+  },
   disclosureBody: { fontSize: 12, lineHeight: 18 },
 
   sectionLabel: {
