@@ -8,5 +8,4 @@
     android:initialLayout="@layout/task_widget"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen"
-    android:previewLayout="@layout/task_widget"
-    android:description="@string/widget_description" />
+    android:previewLayout="@layout/task_widget" />

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
@@ -133,7 +134,7 @@
         android:id="@+id/widget_empty"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/widget_no_tasks"
+        android:text="No pending tasks"
         android:textColor="#6B8FBF"
         android:textSize="12sp"
         android:visibility="gone" />
@@ -149,7 +150,7 @@
         android:id="@+id/widget_footer"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="@string/widget_tap_to_open"
+        android:text="Tap to open TaskMind"
         android:textColor="#6B8FBF"
         android:textSize="10sp" />
 
