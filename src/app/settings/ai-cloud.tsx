@@ -15,6 +15,7 @@ import { Colors } from '@/ui/theme/colors';
 import { useTheme } from '@/ui/theme';
 import { getSetting, setSetting } from '@/data/storage/settings';
 import { testConnection } from '@/services/ai-classifier';
+import { runDailyDigestNow } from '@/services/ai-digest';
 
 const DEPTH = 4;
 
@@ -41,6 +42,7 @@ export default function AiCloudScreen(): React.JSX.Element {
   const [digestTime, setDigestTime] = useState(getSetting('ai_digest_time'));
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [digestRunning, setDigestRunning] = useState(false);
 
   const handleAiToggle = useCallback(
     (val: boolean) => {
@@ -78,6 +80,16 @@ export default function AiCloudScreen(): React.JSX.Element {
     setSetting('ai_last_digest_date', ''); // reset so it runs at new time
     Alert.alert('Saved', `Daily digest will run at ${digestTime.trim()}.`);
   }, [digestTime]);
+
+  const handleRunDigestNow = useCallback(async () => {
+    setDigestRunning(true);
+    const result = await runDailyDigestNow();
+    setDigestRunning(false);
+    Alert.alert(
+      result.sent ? 'Digest sent' : 'Could not send',
+      result.sent ? 'Check your notifications.' : (result.error ?? 'Unknown error')
+    );
+  }, []);
 
   const handleTest = useCallback(async () => {
     const key = apiKey.trim();
@@ -320,6 +332,27 @@ export default function AiCloudScreen(): React.JSX.Element {
                 </Pressable>
               </View>
             )}
+            <Pressable
+              onPress={() => void handleRunDigestNow()}
+              style={[
+                styles.btn,
+                {
+                  backgroundColor: theme.surfaceVariant,
+                  borderColor: theme.outline,
+                  marginTop: 12,
+                },
+              ]}
+              disabled={digestRunning}
+              accessibilityRole="button"
+            >
+              {digestRunning ? (
+                <ActivityIndicator size="small" color={theme.onSurface} />
+              ) : (
+                <Text style={[styles.btnTextDark, { color: theme.onSurface }]}>
+                  Send digest now
+                </Text>
+              )}
+            </Pressable>
           </View>
         </View>
 
