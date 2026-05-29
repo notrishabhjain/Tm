@@ -11,6 +11,7 @@ import android.database.sqlite.SQLiteException
 import android.graphics.Color
 import android.view.View
 import android.widget.RemoteViews
+import java.io.File
 
 data class WidgetTask(val title: String, val priority: String)
 
@@ -57,13 +58,9 @@ class TaskWidgetProvider : AppWidgetProvider() {
             widgetId: Int,
             tasks: List<WidgetTask>
         ) {
-            val res = context.resources
             val pkg = context.packageName
 
-            fun layoutId(name: String) = res.getIdentifier(name, "layout", pkg)
-            fun viewId(name: String) = res.getIdentifier(name, "id", pkg)
-
-            val views = RemoteViews(pkg, layoutId("task_widget"))
+            val views = RemoteViews(pkg, R.layout.task_widget)
 
             // Tap entire widget → open app
             val launchIntent = context.packageManager.getLaunchIntentForPackage(pkg)
@@ -71,18 +68,18 @@ class TaskWidgetProvider : AppWidgetProvider() {
                 context, 0, launchIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
-            views.setOnClickPendingIntent(viewId("widget_root"), pendingIntent)
+            views.setOnClickPendingIntent(R.id.widget_root, pendingIntent)
 
             // Count badge
             val count = tasks.size
-            views.setTextViewText(viewId("widget_count_badge"), "$count pending")
+            views.setTextViewText(R.id.widget_count_badge, "$count pending")
 
             // Task rows
             data class RowIds(val row: Int, val text: Int, val dot: Int)
             val rowIds = listOf(
-                RowIds(viewId("widget_task_row_1"), viewId("widget_task_text_1"), viewId("widget_task_dot_1")),
-                RowIds(viewId("widget_task_row_2"), viewId("widget_task_text_2"), viewId("widget_task_dot_2")),
-                RowIds(viewId("widget_task_row_3"), viewId("widget_task_text_3"), viewId("widget_task_dot_3")),
+                RowIds(R.id.widget_task_row_1, R.id.widget_task_text_1, R.id.widget_task_dot_1),
+                RowIds(R.id.widget_task_row_2, R.id.widget_task_text_2, R.id.widget_task_dot_2),
+                RowIds(R.id.widget_task_row_3, R.id.widget_task_text_3, R.id.widget_task_dot_3),
             )
 
             for ((index, ids) in rowIds.withIndex()) {
@@ -98,7 +95,7 @@ class TaskWidgetProvider : AppWidgetProvider() {
 
             // Empty state
             views.setViewVisibility(
-                viewId("widget_empty"),
+                R.id.widget_empty,
                 if (tasks.isEmpty()) View.VISIBLE else View.GONE
             )
 
@@ -107,13 +104,14 @@ class TaskWidgetProvider : AppWidgetProvider() {
                 count > 3 -> "+${count - 3} more · tap to open"
                 else -> "Tap to open TaskMind"
             }
-            views.setTextViewText(viewId("widget_footer"), footerText)
+            views.setTextViewText(R.id.widget_footer, footerText)
 
             manager.updateAppWidget(widgetId, views)
         }
 
         fun readPendingTasks(context: Context): List<WidgetTask> {
-            val dbPath = context.getDatabasePath("taskmind.db").absolutePath
+            // expo-sqlite v15 stores databases in filesDir/SQLite/, not the standard databases/ dir
+            val dbPath = File(context.filesDir, "SQLite/taskmind.db").absolutePath
             return try {
                 SQLiteDatabase.openDatabase(dbPath, null, SQLiteDatabase.OPEN_READONLY).use { db ->
                     val cursor = db.rawQuery(

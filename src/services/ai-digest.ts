@@ -76,21 +76,16 @@ async function fetchDigestText(
   }
 }
 
-export async function runDailyDigestIfNeeded(): Promise<void> {
-  if (!getSetting('ai_enabled')) return;
-  if (!getSetting('ai_digest_enabled')) return;
-  if (!isPastDigestTime()) return;
-  if (getSetting('ai_last_digest_date') === todayKey()) return;
-
+async function runDigest(): Promise<{ sent: boolean; error?: string }> {
   try {
     initializeDatabase();
     const taskRepo = new TaskRepository(db);
     const pending = await taskRepo.getPendingTasks();
-    if (pending.length === 0) return;
+    if (pending.length === 0) return { sent: false, error: 'No pending tasks' };
 
     const tasks = pending.map((t) => ({ title: t.title, priority: t.priority }));
     const briefing = await fetchDigestText(tasks);
-    if (!briefing) return;
+    if (!briefing) return { sent: false, error: 'No response from AI (check API key)' };
 
     await notifee.createChannel({
       id: CHANNEL_ID,
@@ -113,7 +108,23 @@ export async function runDailyDigestIfNeeded(): Promise<void> {
     });
 
     setSetting('ai_last_digest_date', todayKey());
-  } catch {
-    /* non-fatal — digest is best-effort */
+    return { sent: true };
+  } catch (e) {
+    return { sent: false, error: e instanceof Error ? e.message : 'Unknown error' };
   }
+}
+
+export async function runDailyDigestIfNeeded(): Promise<void> {
+  if (!getSetting('ai_enabled')) return;
+  if (!getSetting('ai_digest_enabled')) return;
+  if (!isPastDigestTime()) return;
+  if (getSetting('ai_last_digest_date') === todayKey()) return;
+  await runDigest();
+}
+
+export async function runDailyDigestNow(): Promise<{ sent: boolean; error?: string }> {
+  if (!getSetting('ai_enabled')) return { sent: false, error: 'Cloud AI is disabled' };
+  if (!getSetting('ai_api_key')) return { sent: false, error: 'No API key configured' };
+  setSetting('ai_last_digest_date', ''); // clear so it can run again today if needed
+  return runDigest();
 }

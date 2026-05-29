@@ -21,6 +21,7 @@ export default function SettingsScreen(): React.JSX.Element {
     'unknown'
   );
   const [urgentOverride, setUrgentOverride] = useState(getSetting('urgent_override_quiet'));
+  const [aiEnabled, setAiEnabled] = useState(getSetting('ai_enabled'));
   const nudgeFreq = getSetting('nudge_freq_minutes');
 
   const { data: monitoredApps = [] } = useQuery({
@@ -49,6 +50,7 @@ export default function SettingsScreen(): React.JSX.Element {
   useFocusEffect(
     useCallback(() => {
       void checkPermission();
+      setAiEnabled(getSetting('ai_enabled'));
     }, [checkPermission])
   );
 
@@ -129,7 +131,7 @@ export default function SettingsScreen(): React.JSX.Element {
         <Section title="Intelligence">
           <NavRow
             label="Cloud AI"
-            subtitle={getSetting('ai_enabled') ? 'NVIDIA · enabled' : 'Off — fully on-device'}
+            subtitle={aiEnabled ? 'NVIDIA · enabled' : 'Off — fully on-device'}
             onPress={() => void router.push('/settings/ai-cloud')}
           />
           <NavRow
@@ -168,8 +170,8 @@ export default function SettingsScreen(): React.JSX.Element {
 
         <Section title="Reports">
           <NavRow
-            label="Daily Email Report"
-            subtitle={getSetting('email_enabled') ? 'Enabled' : 'Not configured'}
+            label="Task Report"
+            subtitle="Export CSV or JSON, share via Gmail"
             onPress={() => void router.push('/settings/email-report')}
           />
           <NavRow
